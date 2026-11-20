@@ -14,6 +14,21 @@ npm run dev
 
 `npm run build` → production bundle in `dist/` (Mapbox is code-split and loaded only when the story reaches the car screen).
 
+## Deploy
+
+Live at https://safetycar.invent2025.org (Apache on `wp-host`, behind a Cloudflare Tunnel).
+
+```bash
+bash scripts/deploy.sh          # builds, uploads dist/ and swaps it in atomically
+```
+
+Needs SSH access to `wp-host` and `VITE_MAPBOX_TOKEN` in `.env`. The previous release stays in `public_html.old`.
+
+## Database
+
+PostgreSQL 17 + PostGIS 3.5 on the same server (localhost only), database `safetycar`.
+`db/01_ptp.sql` loads the crash CSV: `psql -d safetycar -f db/01_ptp.sql < ptp_history_21to25.csv`.
+
 ## Stack
 
 Vite · React 19 · TypeScript · React Three Fiber + drei + postprocessing · GSAP ScrollTrigger · Lenis · Mapbox GL JS.
