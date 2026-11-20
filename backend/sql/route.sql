@@ -84,8 +84,19 @@ as $$
   order by min(g.f0)
 $$;
 
+-- cities and towns for the start/end fields of /demo (GET /api/places); the API role has no access to schema osm
+drop table if exists api.places;
+create table api.places as
+select distinct on (p.name) p.name, p.place,
+       round(st_x(p.geom)::numeric, 5)::float8 as lon, round(st_y(p.geom)::numeric, 5)::float8 as lat
+from osm.places p
+where p.place in ('city', 'town') and p.name is not null
+  and st_intersects(p.geom, (select geom from osm.admin where admin_level = 2 and name = 'България' limit 1))
+order by p.name, case p.place when 'city' then 1 else 2 end;
+
 do $$ begin
   if exists (select 1 from pg_roles where rolname = 'safetycar_ro') then
+    grant select on api.places to safetycar_ro;
     grant execute on function api.route_risk(text, boolean) to safetycar_ro;
   end if;
 end $$;

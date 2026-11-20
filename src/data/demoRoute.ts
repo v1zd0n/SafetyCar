@@ -74,6 +74,21 @@ export function makeDemoRoute(origin: Place, destination: Place, vehicle: Vehicl
   }
 }
 
+// All cities and towns from the backend (GET /api/places, next to the route endpoint).
+// Without a backend, or if it fails, the five demo places stay.
+export async function loadPlaces(): Promise<Place[]> {
+  const endpoint = import.meta.env.VITE_ROUTE_API_URL as string | undefined
+  if (!endpoint) return places
+  try {
+    const response = await fetch(endpoint.replace(/\/route\/?$/, '/places'))
+    if (!response.ok) return places
+    const list: Place[] = await response.json()
+    return Array.isArray(list) && list.length ? list : places
+  } catch {
+    return places
+  }
+}
+
 export async function loadRoute(origin: Place, destination: Place, vehicle: VehicleType): Promise<RouteResult> {
   const endpoint = import.meta.env.VITE_ROUTE_API_URL as string | undefined
   if (!endpoint) return makeDemoRoute(origin, destination, vehicle)

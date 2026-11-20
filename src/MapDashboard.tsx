@@ -1,18 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Mark } from './components/Icons'
-import { loadRoute, makeDemoRoute, places, type Place, type RiskLevel, type RouteResult, type VehicleType } from './data/demoRoute'
+import { loadPlaces, loadRoute, makeDemoRoute, places, type Place, type RiskLevel, type RouteResult, type VehicleType } from './data/demoRoute'
 import { RouteMap } from './map/RouteMap'
 import { clearDemoTransition, hasDemoTransition } from './transition/goToDemo'
 import './MapDashboard.css'
 
 const riskLabels: Record<RiskLevel, string> = { high: 'Висок риск', medium: 'Среден риск', low: 'Нисък риск' }
 const formatTime = (minutes: number) => `${Math.floor(minutes / 60)} ч ${String(minutes % 60).padStart(2, '0')} мин`
-const findPlace = (value: string) => places.find((place) => place.name.toLocaleLowerCase('bg') === value.trim().toLocaleLowerCase('bg'))
+const findPlace = (list: Place[], value: string) => list.find((place) => place.name.toLocaleLowerCase('bg') === value.trim().toLocaleLowerCase('bg'))
 const clockTime = () => new Intl.DateTimeFormat('bg-BG', { hour: '2-digit', minute: '2-digit' }).format(new Date())
 
 export default function MapDashboard() {
   const [origin, setOrigin] = useState('София')
   const [destination, setDestination] = useState('Стара Загора')
+  const [placeList, setPlaceList] = useState<Place[]>(places)
+  useEffect(() => { loadPlaces().then(setPlaceList) }, [])
   const [vehicle, setVehicle] = useState<VehicleType>('car')
   const [route, setRoute] = useState<RouteResult>(() => makeDemoRoute(places[0], places[3], 'car'))
   const [shownRoute, setShownRoute] = useState({ origin: 'София', destination: 'Стара Загора' })
@@ -38,8 +40,8 @@ export default function MapDashboard() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const from = findPlace(origin)
-    const to = findPlace(destination)
+    const from = findPlace(placeList, origin)
+    const to = findPlace(placeList, destination)
     if (!from || !to) { setError('Изберете град от предложенията.'); return }
     if (from.id === to.id) { setError('Началната и крайната точка трябва да са различни.'); return }
     setLoading(true)
@@ -81,7 +83,7 @@ export default function MapDashboard() {
             <label className="route-field"><span>НАЧАЛНА ТОЧКА</span><div><i className="field-dot field-dot--start" /><input list="route-cities" value={origin} onChange={(event) => setOrigin(event.target.value)} placeholder="Избери град" autoComplete="off" aria-label="Начална точка" /></div></label>
             <button className="swap-button" type="button" onClick={() => { setOrigin(destination); setDestination(origin) }} aria-label="Размени начална и крайна точка">⇅</button>
             <label className="route-field"><span>КРАЙНА ТОЧКА</span><div><i className="field-dot field-dot--end" /><input list="route-cities" value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="Избери град" autoComplete="off" aria-label="Крайна точка" /></div></label>
-            <datalist id="route-cities">{places.map((place: Place) => <option key={place.id} value={place.name} />)}</datalist>
+            <datalist id="route-cities">{placeList.map((place: Place) => <option key={place.id} value={place.name} />)}</datalist>
           </div>
           <div className="vehicle-field"><span>ВИД МПС</span><div className="vehicle-options" role="group" aria-label="Вид МПС"><button type="button" className={vehicle === 'car' ? 'is-selected' : ''} onClick={() => setVehicle('car')} aria-pressed={vehicle === 'car'}><img src="/images/demo-car.webp" alt="" /><span>Лек автомобил</span></button><button type="button" className={vehicle === 'truck' ? 'is-selected' : ''} onClick={() => setVehicle('truck')} aria-pressed={vehicle === 'truck'}><img src="/images/demo-truck.webp" alt="" /><span>Над 3.5 т</span></button></div></div>
           <button className="route-submit" type="submit" disabled={loading}>{loading ? 'Зареждане…' : 'Покажи маршрута'} <span>→</span></button>
