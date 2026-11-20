@@ -4,6 +4,7 @@ import { ContactShadows, Environment, Lightformer, MeshReflectorMaterial } from 
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { Car } from './CarModel'
+import { Decor } from './Decor'
 import { rig } from '../scroll/store'
 
 function CameraRig() {
@@ -36,18 +37,23 @@ function Studio({ lite }: { lite: boolean }) {
   return (
     <>
       <color attach="background" args={['#0a0a0b']} />
-      <fog attach="fog" args={['#0a0a0b', 9, 22]} />
-      <ambientLight intensity={0.15} />
+      <fog attach="fog" args={['#0a0a0b', 11, 28]} />
+      <ambientLight intensity={0.25} />
+      {/* key light from the front-left + cool rim from behind */}
+      <spotLight position={[-4, 5, -6]} angle={0.45} penumbra={0.8} intensity={70} color="#ffffff" />
+      <spotLight position={[3, 3, 7]} angle={0.5} penumbra={1} intensity={40} color="#9db4ff" />
       <spotLight position={[0, 7, 0]} angle={0.5} penumbra={1} intensity={60} color="#ffffff" castShadow={!lite} />
       <pointLight position={[-6, 1.2, 2]} intensity={25} color="#ff5a1f" distance={14} />
       <pointLight position={[6, 2, -4]} intensity={8} color="#7aa2ff" distance={14} />
 
       {/* Reflection-only studio environment, no network HDRI needed */}
-      <Environment resolution={256} frames={1}>
+      <Environment resolution={256} frames={1} environmentIntensity={1.5}>
         <Lightformer form="rect" intensity={4} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[10, 0.6, 1]} />
         <Lightformer form="rect" intensity={2} position={[-5, 1.5, 0]} rotation-y={Math.PI / 2} scale={[8, 0.4, 1]} />
         <Lightformer form="rect" intensity={2} position={[5, 1.5, 0]} rotation-y={-Math.PI / 2} scale={[8, 0.4, 1]} />
         <Lightformer form="ring" color="#ff5a1f" intensity={3} position={[-4, 2, -6]} scale={3} />
+        <Lightformer form="rect" intensity={3} position={[0, 2.5, -7]} scale={[8, 1.2, 1]} />
+        <Lightformer form="rect" color="#ff8a50" intensity={2} position={[6, 0.8, 4]} rotation-y={-Math.PI / 3} scale={[6, 0.25, 1]} />
       </Environment>
 
       {lite ? (
@@ -78,7 +84,9 @@ function Studio({ lite }: { lite: boolean }) {
   )
 }
 
-export default function Experience({ active, lite }: { active: boolean; lite: boolean }) {
+type Props = { active: boolean; lite: boolean; onReady?: () => void }
+
+export default function Experience({ active, lite, onReady }: Props) {
   return (
     <Canvas
       className="scene"
@@ -87,14 +95,20 @@ export default function Experience({ active, lite }: { active: boolean; lite: bo
       shadows={!lite}
       gl={{ antialias: !lite, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping }}
       camera={{ fov: lite ? 50 : 35, near: 0.05, far: 60, position: [rig.px, rig.py, rig.pz] }}
+      onCreated={(state) => {
+        // dev-only handle so automated checks can render frames while the tab is in the background
+        if (import.meta.env.DEV) (window as unknown as { __r3f: unknown }).__r3f = state
+        onReady?.()
+      }}
     >
       <Suspense fallback={null}>
         <Studio lite={lite} />
         <Car />
+        <Decor lite={lite} />
         <CameraRig />
         {!lite && (
           <EffectComposer multisampling={0}>
-            <Bloom mipmapBlur intensity={0.9} luminanceThreshold={0.85} luminanceSmoothing={0.2} />
+            <Bloom mipmapBlur intensity={1.1} luminanceThreshold={0.8} luminanceSmoothing={0.25} />
             <Vignette offset={0.25} darkness={0.75} />
           </EffectComposer>
         )}

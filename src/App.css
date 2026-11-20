@@ -5,100 +5,6 @@
   z-index: 0;
 }
 
-/* ---------- Image studio + hero car (default until a GLB exists) ---------- */
-.scene--studio {
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse 70% 45% at 50% 78%, #24160f 0%, transparent 70%),
-    radial-gradient(ellipse 120% 80% at 50% 0%, #121216 0%, var(--bg-base) 60%);
-}
-.scene--studio::before {
-  /* overhead softbox strip */
-  content: '';
-  position: absolute;
-  left: 25%;
-  right: 25%;
-  top: 12.5%;
-  height: 3px;
-  border-radius: 2px;
-  background: rgb(255 255 255 / 0.75);
-  filter: blur(4px);
-  box-shadow: 0 0 60px 12px rgb(255 255 255 / 0.08);
-}
-.scene--studio::after {
-  /* floor fog */
-  content: '';
-  position: absolute;
-  inset: 62% 0 0 0;
-  background: linear-gradient(to bottom, transparent, rgb(28 28 32 / 0.55) 50%, var(--bg-base));
-  pointer-events: none;
-}
-.hero-car {
-  --cw: min(84vw, 1280px);
-  position: absolute;
-  z-index: 1;
-  width: var(--cw);
-  left: calc(50% - var(--cw) / 2);
-  bottom: 9vh;
-}
-.hero-car__glow {
-  position: absolute;
-  left: 50%;
-  bottom: 10%;
-  width: 120%;
-  aspect-ratio: 2.4;
-  translate: -50% 30%;
-  background: radial-gradient(closest-side, rgb(255 90 31 / 0.35), rgb(255 90 31 / 0.08) 55%, transparent);
-  pointer-events: none;
-}
-.hero-car__floor {
-  position: absolute;
-  left: 4%;
-  right: 4%;
-  bottom: 3%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.25), transparent);
-  box-shadow: 0 0 40px 10px rgb(0 0 0 / 0.9);
-}
-.hero-car__body {
-  position: relative;
-  transform-origin: 60% 33%; /* front side window — the dolly-zoom target */
-  will-change: transform;
-}
-.hero-car__img {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 30px 40px rgb(0 0 0 / 0.65));
-}
-.hero-car__reflection {
-  position: absolute;
-  left: 0;
-  top: 96%;
-  width: 100%;
-  transform: scaleY(-1);
-  opacity: 0.18;
-  filter: blur(3px);
-  /* applied before the flip, so the fade runs "up" in source = down on screen */
-  -webkit-mask-image: linear-gradient(to top, #000, transparent 45%);
-  mask-image: linear-gradient(to top, #000, transparent 45%);
-}
-.hero-car__sweep {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.22) 50%, transparent 65%) no-repeat;
-  background-size: 250% 100%;
-  -webkit-mask: url('/images/car-hero.webp') center / 100% 100% no-repeat;
-  mask: url('/images/car-hero.webp') center / 100% 100% no-repeat;
-  mix-blend-mode: screen;
-  animation: carSweep 7s ease-in-out infinite;
-}
-@keyframes carSweep {
-  0%, 55% { background-position: 130% 0; }
-  85%, 100% { background-position: -30% 0; }
-}
 
 .story {
   position: relative;
@@ -288,32 +194,30 @@
   width: 100%;
   height: 100%;
 }
-/* shifted up so the road's horizon (≈51% of the photo) sits inside the windshield */
-.cockpit__road {
-  inset: -26% -4% 18% -4% !important;
-  transform: translate3d(calc(var(--mx) * -26px), calc(var(--my) * -14px), 0);
-}
-.cockpit__road img { object-fit: cover; animation: drive 18s ease-in-out infinite alternate; }
+/* parallax layers — everything inside one layer moves together */
+.cockpit__layer--road { transform: translate3d(calc(var(--mx) * -26px), calc(var(--my) * -14px), 0); }
+.cockpit__layer--hud { opacity: 0; transform: translate3d(calc(var(--mx) * -14px), calc(var(--my) * -8px), 0); }
+.cockpit__layer--interior { transform: translate3d(calc(var(--mx) * 6px), calc(var(--my) * 4px), 0); }
+.cockpit__layer > * { position: absolute; }
+/* road photo: 108% wide, shifted up 33.4% so its horizon sits in the windshield (see roadToFrame) */
+.cockpit__road { inset: -33.4% -4% 25.4% -4%; overflow: hidden; }
+.cockpit__road img { object-fit: cover; animation: drive 18s ease-in-out infinite alternate; transform-origin: 53% 51%; }
 @keyframes drive {
   from { transform: scale(1); }
-  to { transform: scale(1.06); }
+  to { transform: scale(1.035); }
 }
+.cockpit__ar { inset: 0; opacity: 0; }
 .road-dash { animation: dash 0.9s linear infinite; }
 @keyframes dash {
   to { stroke-dashoffset: -66; }
 }
-.cockpit__hud {
-  opacity: 0;
-  transform: translate3d(calc(var(--mx) * -12px), calc(var(--my) * -6px), 0);
-}
-.cockpit__interior { transform: translate3d(calc(var(--mx) * 6px), calc(var(--my) * 4px), 0); }
 .ambient {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
 }
 .ambient--glow { opacity: 0.6; }
 .cockpit__sweep {
-  inset: 0 auto 0 0 !important;
+  inset: 0 auto 0 0;
   width: 40%;
   opacity: 0;
   pointer-events: none;
@@ -321,64 +225,92 @@
   mix-blend-mode: screen;
 }
 
+/* AR beam on the road */
+.ar-flow {
+  stroke-dasharray: 4 14;
+  animation: arFlow 1.1s linear infinite;
+}
+@keyframes arFlow {
+  to { stroke-dashoffset: -18; }
+}
+.ar-chevron { animation: chevron 1.2s ease-in-out infinite; }
+@keyframes chevron {
+  0%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+.ar-ping { transform-box: fill-box; transform-origin: center; animation: ping 1.8s ease-out infinite; }
+.ar-ping--2 { animation-delay: 0.9s; }
+@keyframes ping {
+  from { transform: scale(0.6); opacity: 1; }
+  to { transform: scale(3.2); opacity: 0; }
+}
+.ar-label { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.1em; fill: #fff; paint-order: stroke; stroke: rgb(0 0 0 / 0.6); stroke-width: 3px; }
+
 /* HUD projection typography (SVG text, in image pixels) */
 .hud text { font-family: var(--font-mono); }
 .hud-mono { font-size: 22px; letter-spacing: 0.12em; }
 .hud-big { font-family: var(--font-display) !important; font-size: 64px; font-weight: 700; letter-spacing: -0.03em; }
 .hud-limit { font-family: var(--font-display) !important; font-size: 30px; font-weight: 700; }
-.hud-chevron { animation: chevron 1.2s ease-in-out infinite; }
-@keyframes chevron {
-  0%, 100% { opacity: 0.25; }
-  40% { opacity: 1; }
-}
 
 .cockpit__off {
+  border-radius: 3px;
   background: linear-gradient(125deg, #0d0d10, #030304 60%);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.04);
 }
 
-/* Digital driver display */
+/* Digital driver display — stays strictly inside its glass */
 .cluster {
-  position: absolute;
   container-type: size;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  grid-template-rows: 1fr auto;
+  /* speed + info sit as one group in the centre of the glass */
+  display: flex;
+  justify-content: center;
   align-items: center;
-  /* % not cqw: container units on the container itself resolve against its parent */
-  padding: 0 6%;
-  border-radius: 10px;
-  background: radial-gradient(ellipse at 50% 120%, rgb(255 90 31 / 0.22), transparent 70%), #050506;
+  gap: 7cqh;
+  padding: 0 4%;
+  border-radius: 3px;
+  background: radial-gradient(ellipse at 50% 130%, rgb(255 90 31 / 0.2), transparent 60%), #050506;
   opacity: 0;
   overflow: hidden;
+  white-space: nowrap;
 }
-.cluster__gear { font-size: 14cqh; color: var(--accent-signal); justify-self: start; }
-.cluster__unit { justify-self: end; }
+.cluster__speedo { display: flex; align-items: baseline; gap: 4cqh; }
 .cluster__speed {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 46cqh;
+  font-size: 52cqh;
   line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  text-align: center;
+  min-width: 2ch;
+  text-align: right;
+  transition: color 0.4s;
 }
-.cluster__unit { font-size: 10cqh; color: var(--text-secondary); letter-spacing: 0; }
-.cluster__risk {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 4cqw;
-  padding-bottom: 12cqh;
+.cluster__speed.is-over { color: var(--accent-signal); }
+.cluster__unit { font-family: var(--font-mono); font-size: 13cqh; color: var(--text-secondary); }
+.cluster__info { display: grid; gap: 9cqh; font-family: var(--font-mono); font-size: 10cqh; letter-spacing: -0.02em; color: var(--text-secondary); }
+.cluster__row { display: flex; align-items: center; gap: 4cqh; }
+.cluster__sign {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26cqh;
+  height: 26cqh;
+  border-radius: 50%;
+  border: 3cqh solid var(--accent-danger);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11cqh;
+  color: var(--text-primary);
 }
-.cluster__risk .t-mono { font-size: 11cqh; color: var(--text-muted); }
-.cluster__risk i { flex: 1; height: 5cqh; border-radius: 9px; background: var(--border-subtle); overflow: hidden; }
-.cluster__risk b {
+.cluster__bar { flex: none; width: 30cqh; height: 7cqh; border-radius: 9px; background: var(--border-subtle); overflow: hidden; }
+.cluster__bar b {
   display: block;
   height: 100%;
   transform-origin: left;
-  background: linear-gradient(90deg, var(--accent-safe), var(--accent-signal) 60%, var(--accent-danger));
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--accent-safe), var(--accent-signal) 55%, var(--accent-danger));
 }
+.cluster__row em { font-style: normal; color: var(--accent-danger); opacity: 0; }
 
 /* ---------- Payner OS screen ---------- */
 .cockpit__screen { position: absolute; }
@@ -475,40 +407,57 @@
 
 .screen__boot {
   display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 6cqw;
-  padding: 0 8cqw;
+  place-content: center;
+  justify-items: center;
+  gap: 7cqh;
   opacity: 0;
-  background: #050506;
+  /* wallpaper (behind) shows through a dark veil */
+  background: radial-gradient(ellipse at 50% 45%, rgb(5 5 6 / 0.35), rgb(5 5 6 / 0.85) 75%);
 }
-.boot__logo { position: relative; width: 40cqh; aspect-ratio: 1; display: grid; place-items: center; }
-.boot__logo svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.boot__brand {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 4.5cqh 9cqw;
+}
+.boot__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 6px rgb(255 90 31 / 0.6));
+}
 .boot__ring { stroke-dasharray: 1; stroke-dashoffset: 1; stroke-linecap: round; }
 .boot__word {
   position: relative;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 8.4cqh;
+  font-size: 17cqh;
+  line-height: 1;
   letter-spacing: -0.02em;
   white-space: nowrap;
+  text-shadow: 0 0 24px rgb(255 90 31 / 0.25);
 }
 .boot__word em {
   font-style: normal;
   color: var(--accent-signal);
-  margin-left: 0.25em;
-  font-size: 0.6em;
-  vertical-align: 0.5em;
+  margin-left: 0.18em;
+  font-size: 0.42em;
+  letter-spacing: 0.08em;
+  vertical-align: 1.15em;
 }
 .boot__log {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 2.6cqh;
+  justify-items: center;
+  gap: 2.2cqh;
   font-family: var(--font-mono);
-  font-size: 5cqh;
+  font-size: 4.6cqh;
   color: var(--text-secondary);
+  text-align: center;
 }
 .boot__ok { color: var(--accent-safe); margin-right: 0.6em; }
 .boot__log li:last-child { color: var(--text-primary); }
@@ -551,7 +500,8 @@
 }
 .panel--left { left: var(--gutter); }
 .panel--right { right: var(--gutter); top: 128px; }
-.panel--center { left: 50%; top: 50%; translate: -50% -50%; max-width: 920px; width: calc(100% - 2 * var(--gutter)); }
+/* centred with inset + auto margins (GSAP resets the `translate` property when it animates) */
+.panel--center { inset: 0; margin: auto; height: fit-content; max-width: 920px; width: calc(100% - 2 * var(--gutter)); }
 .card { padding: 32px; display: grid; gap: 16px; }
 .card h2 { margin: 0; }
 .card--wide { padding: 40px; gap: 24px; }
@@ -715,7 +665,6 @@
   .nav__links, .nav__demo { display: none; }
   .hero { grid-template-columns: 1fr; padding-top: 104px; }
   .hero__right { padding-top: 0; position: absolute; left: var(--gutter); right: var(--gutter); bottom: 96px; gap: 20px; }
-  .hero-car { --cw: 128vw; bottom: 330px; }
   .hero__meta { display: none; }
   /* portrait: zoom the cockpit so the screen stays readable, centred on it */
   .cockpit { --W: max(calc(100svh * var(--ar)), 392vw); } /* screen ≈ 90vw wide */
@@ -726,7 +675,8 @@
     right: 8px;
     top: auto;
     bottom: 8px;
-    translate: none;
+    margin: 0;
+    height: auto;
     max-width: none;
     width: auto;
   }

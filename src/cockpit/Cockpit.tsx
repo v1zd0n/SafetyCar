@@ -2,30 +2,40 @@ import { useEffect, useRef } from 'react'
 import { useLang } from '../i18n/LangContext'
 import { CarScreen } from '../components/CarScreen'
 import { COCKPIT, rectStyle, screenOrigin } from './config'
-import { HudArt, InteriorArt, RoadArt, useImage } from './CockpitArt'
+import { HudArt, InteriorArt, RoadAR, RoadArt, useImage } from './CockpitArt'
 
 function Cluster() {
   const { t } = useLang()
   return (
     <div className="cluster" style={rectStyle(COCKPIT.cluster)} data-cluster>
-      <span className="cluster__gear t-mono">D</span>
-      <span className="cluster__speed" data-speed>
-        0
-      </span>
-      <span className="cluster__unit t-mono">{t.cluster.unit}</span>
-      <span className="cluster__risk">
-        <span className="t-mono">{t.cluster.risk}</span>
-        <i>
-          <b data-risk-bar />
-        </i>
-      </span>
+      <div className="cluster__speedo">
+        <span className="cluster__speed" data-speed>
+          0
+        </span>
+        <span className="cluster__unit">{t.cluster.unit}</span>
+      </div>
+      <div className="cluster__info">
+        <div className="cluster__row">
+          <i className="cluster__sign">50</i>
+          <span>{t.cluster.limit}</span>
+        </div>
+        <div className="cluster__row">
+          <span>{t.cluster.risk}</span>
+          <i className="cluster__bar">
+            <b data-risk-bar />
+          </i>
+          <em data-risk-label>{t.cluster.riskHigh}</em>
+        </div>
+      </div>
     </div>
   )
 }
 
 /**
- * 2.5D cockpit: road → HUD → interior → cluster/screen, all in the
- * interior image's pixel space so the DOM screen matches the picture.
+ * 2.5D cockpit, all layers in the interior image's pixel space:
+ *   road photo + AR beam (parallax layer A)
+ *   HUD readout on the glass (parallax layer B)
+ *   interior photo + screens (parallax layer C — screens move WITH the photo)
  */
 export function Cockpit() {
   const { t } = useLang()
@@ -52,24 +62,29 @@ export function Cockpit() {
   return (
     <div className="cockpit" ref={root} data-cockpit aria-hidden style={{ ['--ar' as string]: COCKPIT.w / COCKPIT.h }}>
       <div className="cockpit__frame" data-cockpit-frame style={{ transformOrigin: screenOrigin }}>
-        <div className="cockpit__road" data-road>
-          <img alt="" {...road.props} />
-          {road.state !== 'ok' && <RoadArt />}
+        <div className="cockpit__layer cockpit__layer--road">
+          <div className="cockpit__road" data-road>
+            <img alt="" {...road.props} />
+            {road.state !== 'ok' && <RoadArt />}
+          </div>
+          <div className="cockpit__ar" data-ar>
+            <RoadAR label={t.hud.spot} />
+          </div>
         </div>
-        <div className="cockpit__hud" data-hud>
+        <div className="cockpit__layer cockpit__layer--hud" data-hud>
           <HudArt labels={t.hud} />
         </div>
-        <div className="cockpit__interior">
-          <img alt="" {...interior.props} />
+        <div className="cockpit__layer cockpit__layer--interior">
+          <img className="cockpit__photo" alt="" {...interior.props} />
           {interior.state !== 'ok' && <InteriorArt />}
-        </div>
-        <div className="cockpit__sweep" data-sweep />
-        {/* screens are transparent in the photo — show "powered-off" glass until they boot */}
-        <div className="cockpit__off" style={rectStyle(COCKPIT.cluster)} />
-        <div className="cockpit__off" style={rectStyle(COCKPIT.screen)} />
-        <Cluster />
-        <div className="cockpit__screen" style={rectStyle(COCKPIT.screen)}>
-          <CarScreen />
+          <div className="cockpit__sweep" data-sweep />
+          {/* screens are transparent in the photo — "powered-off" glass until they boot */}
+          <div className="cockpit__off" style={rectStyle(COCKPIT.cluster)} />
+          <div className="cockpit__off" style={rectStyle(COCKPIT.screen)} />
+          <Cluster />
+          <div className="cockpit__screen" style={rectStyle(COCKPIT.screen)}>
+            <CarScreen />
+          </div>
         </div>
       </div>
     </div>

@@ -1,11 +1,13 @@
 -- 09: read-only access for the backend + ready-made views and vector-tile functions in schema "api".
 -- The backend runs on wp-host and connects to localhost:5432/safetycar as role safetycar_ro.
--- The password is set once by hand (see docs/database.md), never stored in git.
+-- The role is created once by an admin (the safetycar owner may not create roles):
+--   sudo -u postgres psql -c "create role safetycar_ro login password '<random>'"
+-- Its connection string lives on the server in /data/home/safetycar/backend.env (mode 600), never in git.
 \set ON_ERROR_STOP on
 begin;
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'safetycar_ro') then
-    create role safetycar_ro login;
+    raise exception 'role safetycar_ro is missing: create it as postgres first (see the header of this file)';
   end if;
 end $$;
 
