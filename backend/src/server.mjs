@@ -3,6 +3,7 @@
 import express from 'express'
 import { env, pool, query } from './db.mjs'
 import { startPolling } from './live/poll.mjs'
+import { routeRouter } from './route.mjs'
 
 const app = express()
 app.disable('x-powered-by')
@@ -266,6 +267,7 @@ api.get('/stats/summary', wrap(async (req, res) => {
   res.set('Cache-Control', 'public, max-age=3600').json(rows[0])
 }))
 
+api.use(routeRouter)               // POST /api/route (docs/route-api.md)
 app.use('/api', api)
 app.use((req, res) => res.status(404).json({ error: 'not found' }))
 app.use((err, req, res, _next) => {
