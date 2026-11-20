@@ -1,17 +1,19 @@
 """
 Prepare generated images for the landing page.
 
-  python -I scripts/cockpit-keys.py <folder-with-generated-pngs>
+  python -I scripts/cockpit-keys.py assets-src/images
 
-Expected file names in the folder (see docs/image-prompts.md):
-  cockpit-interior.png   windshield/windows = #00FF00, screens = #FF00FF
-  cockpit-road.png       plain image (no keying)
-  payner-wallpaper.png   plain image
-  icon-map.png, icon-stats.png, icon-pipeline.png,
-  icon-shield.png, icon-team.png, icon-route.png   on #00FF00
+Expected names (any of .png / .jpg / .jpeg / .webp), see docs/image-prompts.md:
+  cockpit-interior   windshield/windows = #00FF00, screens = #FF00FF
+  cockpit-road       plain image
+  payner-wallpaper   plain image
+  car-hero           car on #00FF00 (cut out + cropped)
+  og-image           plain image (+ a 1200x630 crop for social previews)
+  icon-map, icon-stats, icon-pipeline, icon-shield, icon-team, icon-route   on #00FF00
 
-Writes optimised .webp files into public/images (+ public/images/icons)
-and prints the screen/cluster rectangles to paste into src/cockpit/config.ts.
+Writes optimised .webp files into public/images (+ public/images/icons) and
+prints the interior size and screen/cluster rectangles for src/cockpit/config.ts.
+Aspect ratios are preserved.
 """
 import sys
 from pathlib import Path
@@ -21,7 +23,22 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "public" / "images"
-W, H = 1536, 1024
+EXTS = (".png", ".jpg", ".jpeg", ".webp")
+
+
+def find(src: Path, name: str):
+    for ext in EXTS:
+        p = src / f"{name}{ext}"
+        if p.exists():
+            return p
+    return None
+
+
+def fit_width(img: Image.Image, width: int) -> Image.Image:
+    """Downscale to `width` (never upscale)."""
+    if img.width <= width:
+        return img
+    return img.resize((width, round(img.height * width / img.width)), Image.LANCZOS)
 
 
 def key_mask(rgb: np.ndarray, target: str) -> np.ndarray:
@@ -39,14 +56,34 @@ def despill(rgb: np.ndarray, target: str) -> np.ndarray:
     if target == "green":
         out[..., 1] = np.minimum(out[..., 1], np.maximum(out[..., 0], out[..., 2]))
     else:
-        cap = out[..., 1] + 10
-        out[..., 0] = np.minimum(out[..., 0], np.maximum(cap, out[..., 0] * 0.6))
-        out[..., 2] = np.minimum(out[..., 2], np.maximum(cap, out[..., 2] * 0.6))
+        # only touch magenta-ish pixels (red AND blue above green) — keeps orange lights orange
+        spill = np.minimum(out[..., 0], out[..., 2]) > out[..., 1] + 20
+        cap = np.maximum(out[..., 1] + 10, np.minimum(out[..., 0], out[..., 2]) * 0.5)
+        out[..., 0] = np.where(spill, np.minimum(out[..., 0], cap), out[..., 0])
+        out[..., 2] = np.where(spill, np.minimum(out[..., 2], cap), out[..., 2])
     return out.clip(0, 255).astype(np.uint8)
 
 
+def keyed(img: Image.Image, targets=("green",)) -> Image.Image:
+    rgb = np.asarray(img.convert("RGB"))
+    alpha = np.ones(rgb.shape[:2], np.float32)
+    clean = rgb
+    for t in targets:
+        alpha = np.minimum(alpha, 1 - key_mask(rgb, t))
+        clean = despill(clean, t)
+    return Image.fromarray(np.dstack([clean, (alpha * 255).astype(np.uint8)]), "RGBA")
+
+
+def crop_alpha(img: Image.Image, pad=0) -> Image.Image:
+    bbox = img.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox()
+    if not bbox:
+        return img
+    x0, y0, x1, y1 = bbox
+    return img.crop((max(0, x0 - pad), max(0, y0 - pad), min(img.width, x1 + pad), min(img.height, y1 + pad)))
+
+
 def components(mask: np.ndarray, min_area: int):
-    """Bounding boxes of connected regions (simple flood fill on a downscaled mask)."""
+    """Bounding boxes of connected regions (flood fill on a downscaled mask)."""
     scale = 4
     small = mask[::scale, ::scale] > 0.5
     seen = np.zeros_like(small)
@@ -73,41 +110,19 @@ def components(mask: np.ndarray, min_area: int):
 
 
 def interior(src: Path):
-    img = Image.open(src).convert("RGB").resize((W, H), Image.LANCZOS)
+    img = fit_width(Image.open(src).convert("RGB"), 1920)
+    W, H = img.size
     rgb = np.asarray(img)
-    green = key_mask(rgb, "green")
     magenta = key_mask(rgb, "magenta")
-    alpha = 1 - np.maximum(green, magenta)
-    clean = despill(despill(rgb, "green"), "magenta")
-    rgba = np.dstack([clean, (alpha * 255).astype(np.uint8)])
-    Image.fromarray(rgba, "RGBA").save(OUT / "cockpit-interior.webp", quality=88, method=6)
+    keyed(img, ("green", "magenta")).save(OUT / "cockpit-interior.webp", quality=88, method=6)
 
     boxes = components(magenta, min_area=3000)[:2]
     boxes.sort(key=lambda b: abs((b[0] + b[2]) / 2 - W / 2))  # centre-most = main screen
-    names = ["screen", "cluster"]
-    print("\nPaste into src/cockpit/config.ts:")
-    for name, (x0, y0, x1, y1, _) in zip(names, boxes):
-        print(f"  {name}: {{ x: {x0}, y: {y0}, w: {x1 - x0}, h: {y1 - y0}, r: 14 }},")
+    print(f"\nInterior: w: {W}, h: {H}")
+    for name, (x0, y0, x1, y1, _) in zip(["screen", "cluster"], boxes):
+        print(f"  {name}: {{ x: {x0}, y: {y0}, w: {x1 - x0}, h: {y1 - y0} }},")
     if len(boxes) < 2:
         print("  (fewer than 2 magenta screens found — check the image)")
-
-
-def plain(src: Path, name: str, size=(W, H)):
-    Image.open(src).convert("RGB").resize(size, Image.LANCZOS).save(OUT / f"{name}.webp", quality=84, method=6)
-
-
-def icon(src: Path, name: str):
-    img = Image.open(src).convert("RGB")
-    rgb = np.asarray(img)
-    alpha = 1 - key_mask(rgb, "green")
-    rgba = Image.fromarray(np.dstack([despill(rgb, "green"), (alpha * 255).astype(np.uint8)]), "RGBA")
-    bbox = rgba.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox()
-    if bbox:
-        rgba = rgba.crop(bbox)
-    side = max(rgba.size)
-    canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    canvas.paste(rgba, ((side - rgba.width) // 2, (side - rgba.height) // 2))
-    canvas.resize((256, 256), Image.LANCZOS).save(OUT / "icons" / f"{name}.webp", quality=90, method=6)
 
 
 def main():
@@ -117,17 +132,33 @@ def main():
     src = Path(sys.argv[1])
     (OUT / "icons").mkdir(parents=True, exist_ok=True)
     done = []
-    if (src / "cockpit-interior.png").exists():
-        interior(src / "cockpit-interior.png")
+
+    if p := find(src, "cockpit-interior"):
+        interior(p)
         done.append("cockpit-interior")
-    for n in ("cockpit-road", "payner-wallpaper"):
-        if (src / f"{n}.png").exists():
-            plain(src / f"{n}.png", n)
+    for n, w in (("cockpit-road", 1920), ("payner-wallpaper", 1280), ("og-image", 1920)):
+        if p := find(src, n):
+            fit_width(Image.open(p).convert("RGB"), w).save(OUT / f"{n}.webp", quality=84, method=6)
             done.append(n)
+    if p := find(src, "og-image"):
+        img = Image.open(p).convert("RGB")
+        target = 1200 / 630
+        h = round(img.width / target)
+        if h <= img.height:
+            top = (img.height - h) // 2
+            img = img.crop((0, top, img.width, top + h))
+        img.resize((1200, 630), Image.LANCZOS).save(OUT / "og-image.jpg", quality=86)
+    if p := find(src, "car-hero"):
+        car = crop_alpha(keyed(Image.open(p)), pad=4)
+        fit_width(car, min(1800, car.width)).save(OUT / "car-hero.webp", quality=90, method=6)
+        done.append("car-hero")
     for k in ("map", "stats", "pipeline", "shield", "team", "route"):
-        p = src / f"icon-{k}.png"
-        if p.exists():
-            icon(p, k)
+        if p := find(src, f"icon-{k}"):
+            ic = crop_alpha(keyed(Image.open(p)))
+            side = max(ic.size)
+            canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            canvas.paste(ic, ((side - ic.width) // 2, (side - ic.height) // 2))
+            canvas.resize((256, 256), Image.LANCZOS).save(OUT / "icons" / f"{k}.webp", quality=90, method=6)
             done.append(f"icon-{k}")
     print("\nProcessed:", ", ".join(done) or "nothing (check file names)")
 

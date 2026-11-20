@@ -5,6 +5,101 @@
   z-index: 0;
 }
 
+/* ---------- Image studio + hero car (default until a GLB exists) ---------- */
+.scene--studio {
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 78%, #24160f 0%, transparent 70%),
+    radial-gradient(ellipse 120% 80% at 50% 0%, #121216 0%, var(--bg-base) 60%);
+}
+.scene--studio::before {
+  /* overhead softbox strip */
+  content: '';
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: 12.5%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.75);
+  filter: blur(4px);
+  box-shadow: 0 0 60px 12px rgb(255 255 255 / 0.08);
+}
+.scene--studio::after {
+  /* floor fog */
+  content: '';
+  position: absolute;
+  inset: 62% 0 0 0;
+  background: linear-gradient(to bottom, transparent, rgb(28 28 32 / 0.55) 50%, var(--bg-base));
+  pointer-events: none;
+}
+.hero-car {
+  --cw: min(84vw, 1280px);
+  position: absolute;
+  z-index: 1;
+  width: var(--cw);
+  left: calc(50% - var(--cw) / 2);
+  bottom: 9vh;
+}
+.hero-car__glow {
+  position: absolute;
+  left: 50%;
+  bottom: 10%;
+  width: 120%;
+  aspect-ratio: 2.4;
+  translate: -50% 30%;
+  background: radial-gradient(closest-side, rgb(255 90 31 / 0.35), rgb(255 90 31 / 0.08) 55%, transparent);
+  pointer-events: none;
+}
+.hero-car__floor {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 3%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.25), transparent);
+  box-shadow: 0 0 40px 10px rgb(0 0 0 / 0.9);
+}
+.hero-car__body {
+  position: relative;
+  transform-origin: 60% 33%; /* front side window — the dolly-zoom target */
+  will-change: transform;
+}
+.hero-car__img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 30px 40px rgb(0 0 0 / 0.65));
+}
+.hero-car__reflection {
+  position: absolute;
+  left: 0;
+  top: 96%;
+  width: 100%;
+  transform: scaleY(-1);
+  opacity: 0.18;
+  filter: blur(3px);
+  /* applied before the flip, so the fade runs "up" in source = down on screen */
+  -webkit-mask-image: linear-gradient(to top, #000, transparent 45%);
+  mask-image: linear-gradient(to top, #000, transparent 45%);
+}
+.hero-car__sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.22) 50%, transparent 65%) no-repeat;
+  background-size: 250% 100%;
+  -webkit-mask: url('/images/car-hero.webp') center / 100% 100% no-repeat;
+  mask: url('/images/car-hero.webp') center / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+  animation: carSweep 7s ease-in-out infinite;
+}
+@keyframes carSweep {
+  0%, 55% { background-position: 130% 0; }
+  85%, 100% { background-position: -30% 0; }
+}
+
 .story {
   position: relative;
   z-index: 1;
@@ -167,8 +262,9 @@
 .cockpit {
   --mx: 0;
   --my: 0;
-  /* the frame covers the viewport while keeping the 1536×1024 image ratio */
-  --W: max(100vw, 150svh);
+  /* the frame covers the viewport while keeping the interior image ratio (--ar set inline) */
+  --ar: 1.777;
+  --W: max(100vw, calc(100svh * var(--ar)));
   position: absolute;
   inset: 0;
   z-index: 6;
@@ -179,9 +275,9 @@
 .cockpit__frame {
   position: absolute;
   width: var(--W);
-  height: calc(var(--W) / 1.5);
+  height: calc(var(--W) / var(--ar));
   left: calc(50vw - var(--W) / 2);
-  top: calc(50svh - var(--W) / 3);
+  top: calc(50svh - var(--W) / var(--ar) / 2);
   will-change: transform;
 }
 .cockpit__frame > div { position: absolute; inset: 0; }
@@ -192,8 +288,9 @@
   width: 100%;
   height: 100%;
 }
+/* shifted up so the road's horizon (≈51% of the photo) sits inside the windshield */
 .cockpit__road {
-  inset: -4% !important;
+  inset: -26% -4% 18% -4% !important;
   transform: translate3d(calc(var(--mx) * -26px), calc(var(--my) * -14px), 0);
 }
 .cockpit__road img { object-fit: cover; animation: drive 18s ease-in-out infinite alternate; }
@@ -233,6 +330,11 @@
 @keyframes chevron {
   0%, 100% { opacity: 0.25; }
   40% { opacity: 1; }
+}
+
+.cockpit__off {
+  background: linear-gradient(125deg, #0d0d10, #030304 60%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.04);
 }
 
 /* Digital driver display */
@@ -523,7 +625,7 @@
   background-size: 83.4% calc(100vh);
   background-repeat: no-repeat;
   background-position-x: center;
-  filter: saturate(1.6) contrast(1.2) drop-shadow(-6px 0 0 rgb(0 229 255 / 0.6)) drop-shadow(6px 0 0 rgb(255 43 214 / 0.6));
+  filter: saturate(1.6) contrast(1.2) drop-shadow(-6px 0 0 rgb(255 179 71 / 0.65)) drop-shadow(6px 0 0 rgb(255 59 31 / 0.65)) sepia(0.6) hue-rotate(-12deg);
 }
 .glitch__word {
   position: absolute;
@@ -536,14 +638,14 @@
   grid-area: 1 / 1;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(56px, 10.4vw, 150px);
+  font-size: clamp(44px, 8.6vw, 128px);
   letter-spacing: -0.05em;
   text-transform: uppercase;
   mix-blend-mode: screen;
   color: var(--text-primary);
 }
-.glitch__word .w--c { color: var(--glitch-cyan); transform: translate(calc(var(--g) * -14px), 0); }
-.glitch__word .w--m { color: var(--glitch-magenta); transform: translate(calc(var(--g) * 14px), 4px); }
+.glitch__word .w--c { color: var(--glitch-amber); transform: translate(calc(var(--g) * -14px), 0); }
+.glitch__word .w--m { color: var(--glitch-ember); transform: translate(calc(var(--g) * 14px), 4px); }
 .glitch__block { position: absolute; opacity: 0; }
 .glitch__scan {
   position: absolute;
@@ -555,10 +657,34 @@
 .footer {
   position: relative;
   z-index: 2;
+  isolation: isolate;
   background: var(--bg-base);
   padding: 72px var(--gutter) 40px;
   overflow: hidden;
 }
+/* the car-on-the-risk-road key visual fades in behind the footer */
+.footer__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.footer__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 60%;
+  opacity: 0.55;
+}
+.footer__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, var(--bg-base) 0%, rgb(10 10 11 / 0.55) 35%, rgb(10 10 11 / 0.35) 60%, var(--bg-base) 100%),
+    linear-gradient(to right, var(--bg-base) 0%, rgb(10 10 11 / 0.6) 45%, transparent 75%);
+}
+.footer > :not(.footer__bg) { position: relative; }
 .footer__top { display: flex; justify-content: space-between; gap: 48px; flex-wrap: wrap; }
 .footer__top > div:first-child { display: grid; gap: 16px; align-content: start; max-width: 420px; }
 .footer__cols { display: flex; gap: 80px; flex-wrap: wrap; }
@@ -589,9 +715,10 @@
   .nav__links, .nav__demo { display: none; }
   .hero { grid-template-columns: 1fr; padding-top: 104px; }
   .hero__right { padding-top: 0; position: absolute; left: var(--gutter); right: var(--gutter); bottom: 96px; gap: 20px; }
+  .hero-car { --cw: 128vw; bottom: 330px; }
   .hero__meta { display: none; }
   /* portrait: zoom the cockpit so the screen stays readable, centred on it */
-  .cockpit { --W: max(150svh, 370vw); } /* screen ≈ 90vw wide */
+  .cockpit { --W: max(calc(100svh * var(--ar)), 392vw); } /* screen ≈ 90vw wide */
   .inside-cap { top: 84px; right: var(--gutter); }
   .inside-cap .t-display-m { font-size: 26px; }
   .panel, .panel--right, .panel--center {

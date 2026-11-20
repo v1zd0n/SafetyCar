@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { LangProvider } from './i18n/LangContext'
-import { Experience } from './three/Experience'
+import { useModelAvailable } from './three/modelAvailable'
+import { HeroCar } from './components/HeroCar'
 import { Nav } from './components/Nav'
 import { Loader } from './components/Loader'
 import { ApproachOverlay, HeroOverlay, InsideCaption } from './components/Overlays'
@@ -13,6 +14,8 @@ import './App.css'
 
 // Mapbox is ~1.7 MB — load it only once the visitor starts the story
 const MapView = lazy(() => import('./map/MapView'))
+// three.js scene: only downloaded when a real GLB exists in /public/models/car.glb
+const Experience = lazy(() => import('./three/Experience'))
 
 function useLite() {
   const query = '(max-width: 768px), (pointer: coarse)'
@@ -33,6 +36,7 @@ function Landing() {
   const [mapEnabled, setMapEnabled] = useState(false)
   const scope = useRef<HTMLDivElement>(null)
   const glitch = useRef<GlitchHandle>(null)
+  const model = useModelAvailable()
 
   useLenis(ready)
   useStory({
@@ -41,13 +45,23 @@ function Landing() {
     ready,
     onSceneActive: setSceneActive,
     onMapEnabled: useCallback(() => setMapEnabled(true), []),
+    model,
   })
 
   const onLoaded = useCallback(() => setReady(true), [])
 
   return (
     <div ref={scope}>
-      <Experience active={sceneActive} lite={lite} />
+      {model === 'yes' ? (
+        <Suspense fallback={null}>
+          <Experience active={sceneActive} lite={lite} />
+        </Suspense>
+      ) : (
+        // image-based studio + hero car (default until a GLB model is added)
+        <div className="scene scene--studio">
+          <HeroCar />
+        </div>
+      )}
       {!ready && <Loader onDone={onLoaded} />}
       <Nav />
 

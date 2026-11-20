@@ -78,7 +78,7 @@ function Studio({ lite }: { lite: boolean }) {
   )
 }
 
-export function Experience({ active, lite }: { active: boolean; lite: boolean }) {
+export default function Experience({ active, lite }: { active: boolean; lite: boolean }) {
   return (
     <Canvas
       className="scene"
