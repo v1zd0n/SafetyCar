@@ -75,10 +75,15 @@ ProxyPassReverse /api http://127.0.0.1:8787/api
 
 ## After new data
 
-- New crashes, segments or weather (`db/run_all.sh`) → run `analysis/run.py` again. It re-creates the `api` views on
-  top of the analysis tables, and `backend/sql/live.sql` when the live layer is installed. Then restart the API
-  (it caches the live map for 2 min).
+- New crashes, segments or weather (`db/run_all.sh`) → run `analysis/run.py` again. Tables whose columns did not
+  change are refilled in place (the API keeps working; requests wait a moment instead of failing). If columns
+  changed, the views are re-created at the end, together with `backend/sql/live.sql` when the live layer is
+  installed. The API's live cache expires within 2 min.
+- New or changed segments → also `npm run setup-db` (rebuilds `live.section_geo`, the static 3-km section table).
 - Changed `backend/sql/live.sql` → `npm run setup-db`.
+- After pulling this version: `npm run setup-db` once (new tables `live.section_geo`, `live.section_station`,
+  new column `weather_status`), then restart the API. Nationwide `/api/live/sections` drops from > 30 s (timeout)
+  on the server to ~0.5 s locally.
 
 ## Database improvements (suggestions, none blocks the demo)
 
@@ -92,3 +97,9 @@ ProxyPassReverse /api http://127.0.0.1:8787/api
    case `03`/`07a` are touched anyway.
 5. Optional speed-up: `api.live_sections()` over the whole network takes ~3 s and `api.road_status_risk()` ~6 s.
    Both are cached (in the API and in `live.road_status_sections`), so this only matters if they're called elsewhere.
+
+## Local development note
+
+The local Docker database (`postgis/postgis` image) has a 64 MB `/dev/shm` by default. Under heavy parallel load,
+PostgreSQL's parallel queries then fail with `could not resize shared memory segment ... No space left on device`.
+Start the container with `--shm-size=512m` (or `shm_size: 512m` in compose). The server installation is not affected.
