@@ -238,3 +238,15 @@ CORS is open (`*`) unless the server sets `CORS_ORIGIN`.
 - Reasons with `estimated: true` and the proactive part rely partly on road-class defaults (no public data on lane
   width, shoulders, markings).
 - Live data: weather (Open-Meteo), traffic and road weather stations (bgtoll.bg), warnings (MeteoAlarm), road events (АПИ).
+
+## 12. Route and section (used by `/demo`)
+
+- `POST /api/route` — body `{origin: {coordinates: [lon, lat]}, destination: {coordinates: [lon, lat]}, vehicleType: "car" | "truck"}`.
+  Route geometry from Mapbox Directions (server side, `MAPBOX_TOKEN` in `backend.env`); risks = the ~3-km sections the
+  route drives on (`api.route_risk`, `backend/sql/route.sql`), consecutive sections of the same road and level merged.
+  `level`: `high` if baseline class ≥ 4 or live АПИ level high/very_high/blocked, `medium` if class 3 or live moderate;
+  low sections are not returned. Each risk also has `sections` (ids), `baseClass`, `liveLevel`, `events`. Format:
+  `docs/route-api.md`. ~5 s for Sofia–Burgas.
+- `GET /api/sections/{section_id}` — one section (`A1:dual:1:19`): `base_class`, `base_score`, `top_reasons`, `fixes`
+  (from its highest-scoring 1-km segment), `live.car` / `live.heavy` (АПИ status, `unknown` if older than 45 min),
+  `crashes_by_year`, `crashes_by_type`, `segments` (the 1-km segments with their scores), geometry as MultiLineString.
