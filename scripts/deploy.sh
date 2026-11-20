@@ -7,6 +7,11 @@ HOST=${1:-wp-host}
 WEBROOT=/data/home/safetycar/public_html
 cd "$(dirname "$0")/.."
 
+# The server keeps the shared .env in /data/home/safetycar/.env (mode 600, outside the web root).
+# No local .env -> take it from there, so any teammate with SSH access builds with the same token.
+if [ ! -f .env ]; then
+  ssh "$HOST" "sudo cat /data/home/safetycar/.env" > .env && echo "using .env from $HOST" >&2
+fi
 grep -qs '^VITE_MAPBOX_TOKEN=pk\.' .env || echo "warning: no VITE_MAPBOX_TOKEN in .env, the map will not load" >&2
 
 npm ci --no-audit --no-fund

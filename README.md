@@ -27,7 +27,7 @@ Needs SSH access to `wp-host` and `VITE_MAPBOX_TOKEN` in `.env`. The previous re
 ## Database
 
 PostgreSQL 17 + PostGIS 3.5 on the same server (localhost only), database `safetycar`.
-`db/01_ptp.sql` loads the crash CSV: `psql -d safetycar -f db/01_ptp.sql < ptp_history_21to25.csv`.
+Built by `db/run_all.sh` (steps `db/01`–`09`). Tables, API and examples for the backend: [`docs/database.md`](docs/database.md).
 
 ## Stack
 
