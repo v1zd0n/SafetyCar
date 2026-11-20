@@ -179,6 +179,6 @@ commit;
 analyze segment_features;
 
 select road_class, count(*), round(avg(lane_width_m), 2) as lane_w, round(avg((not lane_width_imputed)::int), 2) as width_known,
-       round(avg(curvature_deg_per_km)) as curv, round(avg(access_per_km), 1) as access, round(avg(junctions_per_km), 1) as junc,
+       round(avg(curvature_deg_per_km)::numeric) as curv, round(avg(access_per_km)::numeric, 1) as access, round(avg(junctions_per_km)::numeric, 1) as junc,
        round(avg(roadside_obstacle_share)::numeric, 2) as roadside, round(avg((not speed_limit_imputed)::int), 2) as speed_known
 from segment_features group by 1 order by 1;
