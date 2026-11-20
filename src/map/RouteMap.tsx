@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { Coordinate, RiskSection, RouteResult } from '../data/demoRoute'
+import { applyLocalNames } from './localNames'
 
 const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 const colors = { high: '#FF3B30', medium: '#FFB340', low: '#E8BD7C' }
@@ -42,6 +43,7 @@ export function RouteMap({ route, selectedRisk, mapStyle, resetViewSignal, onSel
     instance.addControl(new mapboxgl.NavigationControl({ showCompass: false, visualizePitch: true }), 'bottom-right')
     instance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left')
     instance.on('style.load', () => {
+      applyLocalNames(instance)
       if (!instance.getSource('terrain-dem')) instance.addSource('terrain-dem', { type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize: 512, maxzoom: 14 })
       instance.setTerrain({ source: 'terrain-dem', exaggeration: 1.35 })
     })

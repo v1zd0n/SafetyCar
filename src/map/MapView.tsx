@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { hotspots, VIEWS } from '../data/hotspots'
 import { mapCanvas, sectionBus } from '../scroll/store'
+import { applyLocalNames } from './localNames'
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 
@@ -38,6 +39,7 @@ export default function MapView({ enabled, lite }: { enabled: boolean; lite: boo
     mapRef.current = map
 
     map.on('style.load', () => {
+      applyLocalNames(map)
       map.addSource('mapbox-dem', { type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize: 512, maxzoom: 14 })
       map.setTerrain({ source: 'mapbox-dem', exaggeration: lite ? 1.2 : 1.6 })
       map.setFog({
