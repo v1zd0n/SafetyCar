@@ -41,6 +41,7 @@ scp -q "$TARBALL" "$HOST:/tmp/safetycar-dist.tgz"
 rm -f "$TARBALL"
 
 # Unpack into a fresh dir as the site user, then swap it in (no half-deployed state).
-ssh "$HOST" "sudo -u safetycar sh -c 'set -e; N=$WEBROOT.new; rm -rf \$N; mkdir \$N; tar -xzf /tmp/safetycar-dist.tgz -C \$N; chmod -R a+rX \$N; rm -rf $WEBROOT.old; mv $WEBROOT $WEBROOT.old; mv \$N $WEBROOT' && rm -f /tmp/safetycar-dist.tgz"
+# /dl -> /data/home/safetycar/downloads (files for the team, e.g. the dev DB dump; kept across deploys)
+ssh "$HOST" "sudo -u safetycar sh -c 'set -e; N=$WEBROOT.new; rm -rf \$N; mkdir \$N; tar -xzf /tmp/safetycar-dist.tgz -C \$N; chmod -R a+rX \$N; if [ -d /data/home/safetycar/downloads ]; then ln -sfn ../downloads \$N/dl; fi; rm -rf $WEBROOT.old; mv $WEBROOT $WEBROOT.old; mv \$N $WEBROOT' && rm -f /tmp/safetycar-dist.tgz"
 
 echo "https://safetycar.invent2025.org/ -> $(curl -sS -o /dev/null -w "%{http_code}" https://safetycar.invent2025.org/)"
