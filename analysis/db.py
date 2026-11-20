@@ -42,16 +42,26 @@ PG_TYPES = {"int64": "bigint", "Int64": "bigint", "int32": "integer", "Int32": "
 
 
 def write_table(conn: psycopg.Connection, df: pd.DataFrame, table: str, jsonb_cols=(), primary_key=None) -> None:
-    """Replace analysis.<table> with the contents of df (one transaction, COPY)."""
+    """Replace analysis.<table> with the contents of df (one transaction, COPY).
+
+    Same columns as before -> TRUNCATE + COPY: the table and the views on it (api.segment_risk, live.sections, ...)
+    stay in place, and readers only wait for the commit instead of failing. Changed columns -> drop and re-create
+    (this drops the dependent views; analysis/run.py re-creates them at the end)."""
     cols = []
     for name, dtype in df.dtypes.items():
         pg = "jsonb" if name in jsonb_cols else PG_TYPES.get(str(dtype), "text")
-        cols.append(f'"{name}" {pg}')
+        cols.append((name, pg))
     pk = f", primary key ({primary_key})" if primary_key else ""
     with conn.transaction():
         conn.execute("create schema if not exists analysis")
-        conn.execute(f"drop table if exists analysis.{table} cascade")
-        conn.execute(f"create table analysis.{table} ({', '.join(cols)}{pk})")
+        existing = conn.execute("""select column_name, data_type from information_schema.columns
+                                   where table_schema = 'analysis' and table_name = %s order by ordinal_position""",
+                                (table,)).fetchall()
+        if existing == cols:
+            conn.execute(f"truncate analysis.{table}")
+        else:
+            conn.execute(f"drop table if exists analysis.{table} cascade")
+            conn.execute(f"create table analysis.{table} ({', '.join(f'{chr(34)}{n}{chr(34)} {t}' for n, t in cols)}{pk})")
         json_idx = {i for i, c in enumerate(df.columns) if c in jsonb_cols}
         names = ", ".join(f'"{c}"' for c in df.columns)
         with conn.cursor().copy(f"copy analysis.{table} ({names}) from stdin") as cp:

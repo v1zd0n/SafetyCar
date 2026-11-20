@@ -4,7 +4,8 @@ Score built on 2021-2023 only -> where did the 2024 crashes happen? 2024 has ~99
 cleanest test year (2025 stops in April).
 
 - Share of 2024 fatal / serious crashes on our top 10% of segments (by score, and by the priority order),
-  vs a naive baseline (rank by past serious crash count) and vs chance (10%).
+  vs a naive baseline (rank by past serious crash count) and vs chance (10%). Ties at the cut-off count
+  proportionally (see _top), so the numbers do not depend on sort order.
 - The Yambol stretch of A1 (the Nov 2026 fog pile-up is not in the data).
 Only segments outside settlements (the ones that get a class). Writes analysis.validation.
 """
@@ -20,18 +21,33 @@ TRAIN, TEST = (2021, 2023), 2024
 TOP = 0.10
 
 
-def top_share(df, order_cols, target, ascending=False):
-    d = df.sort_values(order_cols, ascending=ascending)
-    k = int(round(len(d) * TOP))
-    total = d[target].sum()
-    return float(d[target].iloc[:k].sum() / total) if total else np.nan
+def _top(df, order_cols, target, size):
+    """Share of `target` in the top TOP of `size` (segment count or length), ranked by order_cols (descending).
+    Segments that tie on the ranking key at the cut-off are included proportionally, i.e. the expected value under a
+    random tie-break, so the result does not depend on sort order (899 segments tie at the cut-off when ranking by
+    past crash counts)."""
+    total = df[target].sum()
+    if not total:
+        return np.nan
+    g = (df.assign(_size=size).groupby(order_cols, sort=False, dropna=False)[[target, "_size"]].sum()
+         .sort_index(ascending=False))
+    budget = TOP * g["_size"].sum()
+    taken = 0.0
+    for t, s in zip(g[target], g["_size"]):
+        if budget <= 0:
+            break
+        frac = min(1.0, budget / s) if s else 1.0
+        taken += frac * t
+        budget -= frac * s
+    return float(taken / total)
+
+
+def top_share(df, order_cols, target):
+    return _top(df, order_cols, target, 1.0)
 
 
 def top_share_km(df, order_cols, target):
-    d = df.sort_values(order_cols, ascending=False)
-    km = d["length_m"].cumsum() / d["length_m"].sum()
-    total = d[target].sum()
-    return float(d.loc[km <= TOP, target].sum() / total) if total else np.nan
+    return _top(df, order_cols, target, df["length_m"])
 
 
 def run(conn):

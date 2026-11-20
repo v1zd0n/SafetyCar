@@ -5,7 +5,7 @@ Method (RoadEvalGuidelines.docx + docs/data-aggregation.md):
   Segments that are mostly inside settlements are not assessed (ДАБДП leaves out town sections).
 - Reference group = road class (+ carriageway for dual roads). Exposure = segment km x years.
 - ДАБДП label: exact Poisson confidence interval of the segment's count vs the group's expected count
-  -> high / uncertain / low.
+  -> high / uncertain / low. "high" also needs >= MIN_HIGH serious crashes (sparse evidence stays uncertain).
 - Negative binomial model per group + Empirical Bayes -> expected "true" count. reactive_pct ranks the EB crash
   density; excess = EB - group mean is kept for the "fix these first" order.
 - Crash-type over-representation vs the group (segments with >= 5 crashes of any severity).
@@ -27,6 +27,8 @@ from db import connect, read_sql, write_table
 
 YEARS = (2021, 2024)
 CI_LEVEL = 0.90          # two-sided; 90% is less strict than 95% for 3-4 years of data
+MIN_HIGH = 3             # "high" needs at least 3 serious crashes: 1-2 cases stay "uncertain" (sparse evidence,
+                         # RoadEvalGuidelines: no conclusions from one or two cases; Goal.md criterion 2)
 MIN_TYPE_CRASHES = 5     # crash-type over-representation only for segments with at least this many crashes
 TYPE_RATIO = 1.5         # a type is "dominant" if its share is >= 1.5x the group's share ...
 TYPE_MIN_N = 3           # ... and it happened at least 3 times
@@ -99,7 +101,7 @@ def compute(df, years):
     df["ci_low"] = np.where(y > 0, chi2.ppf(q, 2 * y) / 2, 0.0)
     df["ci_high"] = chi2.ppf(1 - q, 2 * y + 2) / 2
     df["reactive_level"] = np.select(
-        [~df["assessed"], df["expected"] < df["ci_low"], df["expected"] > df["ci_high"]],
+        [~df["assessed"], (df["expected"] < df["ci_low"]) & (df["n_serious"] >= MIN_HIGH), df["expected"] > df["ci_high"]],
         ["not_assessed", "high", "low"], "uncertain")
 
     df["excess"] = df["eb_estimate"] - df["expected"]
@@ -119,6 +121,7 @@ def compute(df, years):
     ratio = seg_share / group_share.reindex(df["ref_group"]).set_axis(df.index).replace(0, np.nan)
     ok = (df["n_crashes"] >= MIN_TYPE_CRASHES).to_numpy()[:, None] & (df[tcols].to_numpy() >= TYPE_MIN_N)
     ratio = ratio.where(ok)
+    ratio["n_other"] = np.nan          # "other / unknown type" is not a finding anyone can act on
     best = ratio.fillna(0).idxmax(axis=1)
     best_ratio = ratio.max(axis=1)          # NaN when no type qualifies
     has = best_ratio >= TYPE_RATIO

@@ -55,17 +55,24 @@ create or replace view live.cell_gust_p95 as
 select wx_cell_id, percentile_cont(0.95) within group (order by wind_gusts_10m) as gust_p95
 from weather_hourly group by wx_cell_id;
 
--- latest reading per cell (max 90 min old), flags with the same rules as the historical ones
-create or replace view live.cell_conditions as
+-- latest reading per cell, whatever its age. status: ok (<= 90 min old) or stale; flags only when ok,
+-- with the same rules as the historical ones (db/07_weather.sql). No row at all = "missing" (api.live_sections).
+drop view if exists live.cell_conditions cascade;
+create view live.cell_conditions as
 select w.wx_cell_id, w.ts_utc, w.fetched_at, w.temperature_2m, w.dew_point_2m, w.precip_1h, w.wind_gusts_10m,
        w.cloud_cover_low, w.visibility, w.weather_code,
-       (w.cloud_cover_low >= 90 and w.temperature_2m - w.dew_point_2m <= 1) as fog,
-       (w.precip_1h >= 2) as rain_heavy,
-       (w.wind_gusts_10m > p.gust_p95) as wind_strong,
-       (w.temperature_2m <= 2 and (w.cloud_cover <= 30 or w.precip_6h > 0)) as ice
-from (select distinct on (wx_cell_id) * from live.weather
-      where fetched_at > now() - interval '90 minutes' order by wx_cell_id, fetched_at desc) w
+       case when w.fetched_at > now() - interval '90 minutes' then 'ok' else 'stale' end as status,
+       case when w.fetched_at > now() - interval '90 minutes' then
+         (w.cloud_cover_low >= 90 and w.temperature_2m - w.dew_point_2m <= 1) end as fog,
+       case when w.fetched_at > now() - interval '90 minutes' then (w.precip_1h >= 2) end as rain_heavy,
+       case when w.fetched_at > now() - interval '90 minutes' then (w.wind_gusts_10m > p.gust_p95) end as wind_strong,
+       case when w.fetched_at > now() - interval '90 minutes' then
+         (w.temperature_2m <= 2 and (w.cloud_cover <= 30 or w.precip_6h > 0)) end as ice
+from (select distinct on (wx_cell_id) * from live.weather order by wx_cell_id, fetched_at desc) w
 left join live.cell_gust_p95 p using (wx_cell_id);
+
+create index if not exists weather_fetched_idx on live.weather (wx_cell_id, fetched_at desc);
+create index if not exists station_ts_idx on live.station (station_id, ts_utc desc);
 
 -- latest working reading per road weather station (max 90 min old).
 -- Several stations send surface = 0.0 as "no value" (e.g. 0.0 °C asphalt at 19 °C air): treated as missing.
@@ -86,89 +93,136 @@ select w.*, n.oblast,
 from live.warnings w left join live.nuts3_oblast n using (nuts3)
 where now() between coalesce(w.onset, '-infinity') and coalesce(w.expires, 'infinity');
 
--- 3-km sections: same grouping as api.road_status_risk (vlado): up to 3 consecutive segments
+-- 3-km sections: same grouping as api.road_status_risk (vlado): up to 3 consecutive segments.
+-- The geometry part never changes between data loads, so it is a table (rebuilt by this script), not computed per request.
+create table if not exists live.section_geo (
+  section_id text primary key, road text, road_class text, carriageway text, part_no int, km_from numeric, km_to numeric,
+  length_m numeric, oblast text, wx_cell_id text, seg_ids text[], geom geometry, mid_lon float8, mid_lat float8, mid_m geometry);
+truncate live.section_geo;
+insert into live.section_geo
+select g.*, st_x(m.mid), st_y(m.mid), st_transform(m.mid, 3035)
+from (
+  select concat_ws(':', s.road, s.carriageway, s.part_no, (s.piece_no - 1) / 3 + 1) as section_id,
+         s.road, s.road_class, s.carriageway, s.part_no, min(s.km_from), max(s.km_to), sum(s.length_m),
+         mode() within group (order by s.oblast), mode() within group (order by s.wx_cell_id),
+         array_agg(s.seg_id order by s.piece_no), st_makeline(s.geom order by s.piece_no) as geom
+  from segments s group by s.road, s.road_class, s.carriageway, s.part_no, (s.piece_no - 1) / 3) g(section_id, road, road_class,
+    carriageway, part_no, km_from, km_to, length_m, oblast, wx_cell_id, seg_ids, geom)
+cross join lateral (select st_lineinterpolatepoint(st_linemerge(g.geom), 0.5) as mid) m;
+create index if not exists section_geo_road_idx on live.section_geo (road);
+create index if not exists section_geo_geom_gix on live.section_geo using gist (geom);
+analyze live.section_geo;
+
+-- nearest road weather station (<= 20 km) per section. Stations do not move: refreshed by the station poller
+-- (refresh_section_station()) instead of a nearest-neighbour search for every section on every request.
+create table if not exists live.section_station (section_id text primary key, station_id int not null, dist_m real);
+create or replace function live.refresh_section_station() returns int language sql as $f$
+  delete from live.section_station;
+  with st as (select distinct on (station_id) station_id, st_transform(st_setsrid(st_point(lon, lat), 4326), 3035) as g
+              from live.station where lon is not null order by station_id, ts_utc desc)
+  insert into live.section_station
+  select s.section_id, n.station_id, n.d from live.section_geo s
+  cross join lateral (select st.station_id, st_distance(st.g, s.mid_m) as d from st
+                      where st_dwithin(st.g, s.mid_m, 20000) order by st.g <-> s.mid_m limit 1) n;
+  select count(*)::int from live.section_station;
+$f$;
+select live.refresh_section_station();
+
+-- sections + baseline from the 1-km scores: length-weighted mean (the max made 37% of sections "very high"), max kept too
 drop view if exists live.sections cascade;
 create view live.sections as
-select concat_ws(':', s.road, s.carriageway, s.part_no, (s.piece_no - 1) / 3 + 1) as section_id,
-       s.road, s.road_class, s.carriageway, min(s.km_from) as km_from, max(s.km_to) as km_to,
-       sum(s.length_m) as length_m,
-       mode() within group (order by s.oblast) as oblast,
-       mode() within group (order by s.wx_cell_id) as wx_cell_id,
-       -- length-weighted mean of the 1-km scores (the max made 37% of sections "very high"); max kept separately
-       round((sum(x.score * s.length_m) / nullif(sum(s.length_m) filter (where x.score is not null), 0))::numeric, 1)::float8 as base_score,
-       max(x.score) as base_score_max, max(x.class) as base_class,
-       array_agg(s.seg_id order by s.piece_no) as seg_ids,
-       st_makeline(s.geom order by s.piece_no) as geom
-from segments s left join analysis.segment_scores x using (seg_id)
-group by s.road, s.road_class, s.carriageway, s.part_no, (s.piece_no - 1) / 3;
+select g.section_id, g.road, g.road_class, g.carriageway, g.km_from, g.km_to, g.length_m, g.oblast, g.wx_cell_id,
+       sc.base_score, sc.base_score_max, sc.base_class, g.seg_ids, g.geom, g.mid_lon, g.mid_lat
+from live.section_geo g
+left join (
+  select concat_ws(':', s.road, s.carriageway, s.part_no, (s.piece_no - 1) / 3 + 1) as section_id,
+         round((sum(x.score * s.length_m) / nullif(sum(s.length_m) filter (where x.score is not null), 0))::numeric, 1)::float8 as base_score,
+         max(x.score) as base_score_max, max(x.class) as base_class
+  from segments s join analysis.segment_scores x using (seg_id)
+  group by 1) sc using (section_id);
 
 -- "risk now" per 3-km section ---------------------------------------------------------------------------------------
 -- risk_now   = base score x multipliers of the conditions active now (api.weather_multipliers), max 100
 -- live_score = the higher of risk_now and vlado's road status score (АПИ events); levels use vlado's scale
+-- weather_status = ok / stale (latest reading > 90 min old: not used for conditions) / missing (no reading)
 drop function if exists api.live_sections(boolean, text);
 create function api.live_sections(is_heavy boolean default false, road_filter text default null)
 returns table (
   section_id text, road text, road_class text, carriageway text, km_from numeric, km_to numeric, oblast text,
   base_score double precision, base_score_max double precision, base_class bigint, conditions text[], multiplier double precision,
   risk_now double precision, road_status_score int, road_status_level text, access_status text,
-  events jsonb, warnings jsonb, weather jsonb, live_score double precision, live_level text,
+  events jsonb, warnings jsonb, weather jsonb, weather_status text, live_score double precision, live_level text,
   updated_at timestamptz, geom geometry)
-language sql stable as $$
+language sql stable
+set jit = off
+as $$
   with sec as (
     select * from live.sections where road_filter is null or road = road_filter
   ), mult as (
     select condition, multiplier from api.weather_multipliers
-  ), cond as (
+  ), warn as (                                    -- active MeteoAlarm warnings, once per oblast
+    select oblast, array_agg(distinct condition) filter (where condition is not null) as conds,
+           jsonb_agg(jsonb_build_object('event', event, 'type', awareness_type, 'level', level,
+                                        'title', title, 'onset', onset, 'expires', expires)) as list
+    from live.warnings_now group by oblast
+  ), st as (
+    select ss.section_id, n.surface, n.name from live.section_station ss join live.station_now n using (station_id)
+  ), cond as materialized (                       -- materialized: computed once per section
     select s.section_id,
            array_remove(array[
-             case when c.fog or exists (select 1 from live.warnings_now w where w.oblast = s.oblast and w.condition = 'fog') then 'fog' end,
-             case when c.rain_heavy or exists (select 1 from live.warnings_now w where w.oblast = s.oblast and w.condition = 'rain_heavy') then 'rain_heavy' end,
-             case when c.wind_strong or exists (select 1 from live.warnings_now w where w.oblast = s.oblast and w.condition = 'wind_strong') then 'wind_strong' end,
-             case when c.ice or st.surface <= 0 or exists (select 1 from live.warnings_now w where w.oblast = s.oblast and w.condition = 'ice') then 'ice' end,
-             case when sun_elevation(now(), st_y(st_centroid(s.geom)), st_x(st_centroid(s.geom))) < -6 then 'night' end
+             case when c.fog or 'fog' = any (w.conds) then 'fog' end,
+             case when c.rain_heavy or 'rain_heavy' = any (w.conds) then 'rain_heavy' end,
+             case when c.wind_strong or 'wind_strong' = any (w.conds) then 'wind_strong' end,
+             case when c.ice or st.surface <= 0 or 'ice' = any (w.conds) then 'ice' end,
+             case when sun_elevation(now(), s.mid_lat, s.mid_lon) < -6 then 'night' end
            ], null) as conditions,
+           coalesce(c.status, 'missing') as weather_status,
            jsonb_strip_nulls(jsonb_build_object(
+             'status', coalesce(c.status, 'missing'),
              'temperature_2m', c.temperature_2m, 'visibility_m', c.visibility, 'wind_gusts_kmh', c.wind_gusts_10m,
              'precip_1h_mm', c.precip_1h, 'weather_code', c.weather_code, 'observed_at', c.ts_utc,
              'road_surface_c', st.surface, 'station', st.name)) as weather,
-           c.fetched_at
+           case when c.status = 'ok' then c.fetched_at end as fetched_at,
+           coalesce(w.list, '[]'::jsonb) as warnings
     from sec s
     left join live.cell_conditions c using (wx_cell_id)
-    left join lateral (
-      select n.surface, n.name from live.station_now n
-      where st_dwithin(n.geom_m, st_transform(st_centroid(s.geom), 3035), 20000)
-      order by n.geom_m <-> st_transform(st_centroid(s.geom), 3035) limit 1) st on true
+    left join st using (section_id)
+    left join warn w on w.oblast = s.oblast
   ), rs as (
     select r.*, r.oldest_publication_at > now() - interval '45 minutes' as fresh
     from live.road_status_sections r where r.vehicle = case when is_heavy then 'heavy' else 'car' end
-  ), scored as (
-    select s.*, c.conditions, c.weather, c.fetched_at,
-           coalesce((select exp(sum(ln(m.multiplier))) from mult m where m.condition = any (c.conditions)), 1.0) as multiplier,
-           rs.risk_score, rs.risk_level, rs.access_status, rs.events, rs.fresh, rs.computed_at,
-           (select coalesce(jsonb_agg(jsonb_build_object('event', w.event, 'type', w.awareness_type, 'level', w.level,
-                                                         'title', w.title, 'onset', w.onset, 'expires', w.expires)), '[]'::jsonb)
-            from live.warnings_now w where w.oblast = s.oblast) as warnings
+  ), scored as materialized (                     -- the multiplier once per section, not once per use
+    select s.*, c.conditions, c.weather, c.weather_status, c.fetched_at, c.warnings,
+           coalesce(m.multiplier, 1.0) as multiplier,
+           rs.risk_score, rs.risk_level, rs.access_status, rs.events, rs.fresh, rs.computed_at
     from sec s join cond c using (section_id) left join rs using (section_id)
+    left join lateral (select exp(sum(ln(mult.multiplier))) as multiplier from mult
+                       where mult.condition = any (c.conditions)) m on true
+  ), lv as (
+    select *, least(100, base_score * multiplier) as rn,
+           greatest(least(100, base_score * multiplier), case when fresh then risk_score end) as ls
+    from scored
   )
   select section_id, road, road_class, carriageway, km_from, km_to, oblast, base_score, base_score_max, base_class, conditions,
          round(multiplier::numeric, 3)::float8,
-         least(100, round((base_score * multiplier)::numeric, 1))::float8 as risk_now,
+         round(rn::numeric, 1)::float8 as risk_now,
          case when fresh then risk_score end,
          case when fresh then risk_level else 'unknown' end,
          case when fresh then access_status else 'unknown' end,
          case when fresh then coalesce(events, '[]'::jsonb) else '[]'::jsonb end,
-         warnings, weather,
-         greatest(least(100, base_score * multiplier), case when fresh then risk_score end)::float8 as live_score,
+         warnings, weather, weather_status,
+         round(ls::numeric, 1)::float8 as live_score,
          case when fresh and access_status = 'blocked' then 'blocked'
-              when greatest(least(100, base_score * multiplier), case when fresh then risk_score end) is null then 'unknown'
-              when greatest(least(100, base_score * multiplier), case when fresh then risk_score end) < 35 then 'low'
-              when greatest(least(100, base_score * multiplier), case when fresh then risk_score end) < 60 then 'moderate'
-              when greatest(least(100, base_score * multiplier), case when fresh then risk_score end) < 80 then 'high'
+              when ls is null then 'unknown'
+              when ls < 35 then 'low'
+              when ls < 60 then 'moderate'
+              when ls < 80 then 'high'
               else 'very_high' end,
-         greatest(fetched_at, computed_at),
+         greatest(fetched_at, case when fresh then computed_at end),
          geom
-  from scored
+  from lv
 $$;
+
 
 -- АПИ events as map points with an icon key (icons are drawn by the frontend)
 create or replace view api.live_events as

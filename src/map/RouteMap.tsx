@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { Coordinate, RiskSection, RouteResult } from '../data/demoRoute'
 import { applyLocalNames } from './localNames'
+import { addStationsLayer } from './stationsLayer'
 
 const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 const colors = { high: '#FF3B30', medium: '#FFB340', low: '#E8BD7C' }
@@ -40,6 +41,7 @@ export function RouteMap({ route, selectedRisk, mapStyle, resetViewSignal, onSel
       attributionControl: false,
     })
     map.current = instance
+    let stopStations = () => {}
     instance.addControl(new mapboxgl.NavigationControl({ showCompass: false, visualizePitch: true }), 'bottom-right')
     instance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left')
     instance.on('style.load', () => {
@@ -68,8 +70,9 @@ export function RouteMap({ route, selectedRisk, mapStyle, resetViewSignal, onSel
       instance.on('mouseenter', 'risk-lines', () => { instance.getCanvas().style.cursor = 'pointer' })
       instance.on('mouseleave', 'risk-lines', () => { instance.getCanvas().style.cursor = '' })
       updateMap(instance, routeRef.current, markers)
+      stopStations = addStationsLayer(instance)
     })
-    return () => { markers.current.forEach((marker) => marker.remove()); instance.remove(); map.current = null }
+    return () => { stopStations(); markers.current.forEach((marker) => marker.remove()); instance.remove(); map.current = null }
   }, [mapStyle])
 
   useEffect(() => {

@@ -39,7 +39,7 @@ The Bulgarian route demo uses `GET /places` and `POST /route` when configured, a
 ## 1. Risk map: `GET /tiles/risk/{z}/{x}/{y}.pbf`
 
 Mapbox vector tile, source layer **`risk`**, one line per ~1-km segment. Thinned by zoom: z < 7 only A and I roads,
-z < 9 also II, z ≥ 9 everything. Empty tile = valid response.
+z < 9 also II, z ≥ 9 everything. Empty tile = valid response. Invalid coordinates (not integers, z > 22, x or y ≥ 2^z) → `400`.
 
 | Property | Type | Meaning |
 |---|---|---|
@@ -50,7 +50,7 @@ z < 9 also II, z ≥ 9 everything. Empty tile = valid response.
 | `class` | int 1–5 | ДАБДП class: 1 very low … 5 very high priority. **Default colouring** |
 | `score` | 0–100 | continuous score with the default weights (0.6 reactive + 0.4 proactive) |
 | `reactive_pct`, `proactive_pct` | 0–100 | the two parts of the score, for the sliders |
-| `reactive_level` | text | `high`, `uncertain`, `low`, `not_assessed` |
+| `reactive_level` | text | `high`, `uncertain`, `low`, `not_assessed`. `high` needs ≥ 3 serious crashes; 1–2 crashes stay `uncertain` (sparse evidence) |
 | `proactive_level` | text | `high`, `medium`, `low` |
 | `n_serious`, `n_fatal` | int | serious / fatal crashes 2021–2024 |
 | `top_reason` | text | key of the first reason (see §11) |
@@ -155,7 +155,7 @@ FeatureCollection of points. For the map itself use the tiles (§2), this is for
 ## 7. Live "risk now": `GET /live/sections`
 
 FeatureCollection of **~3-km sections** (the same sections as vlado's АПИ road-status queries). Updated every
-15–20 min. Server-side cached: ~10–60 ms per request (the first request after a server restart waits ~8 s).
+15–20 min. Server-side cached: ~10–60 ms per request; a cold start of the whole network takes ~0.5 s locally.
 
 | Parameter | |
 |---|---|
@@ -179,7 +179,8 @@ Properties:
 | `access_status` | `no_reported_ban`, `conditional`, `blocked`, `unknown` |
 | `events` | АПИ events on this section: `[{id, kind, score, description, vehicle_rules}]` |
 | `warnings` | MeteoAlarm warnings for the oblast: `[{event, type, level (yellow/orange/red), title, onset, expires}]` |
-| `weather` | `{temperature_2m, visibility_m, wind_gusts_kmh, precip_1h_mm, weather_code, observed_at, road_surface_c, station}` |
+| `weather_status` | `ok` (reading ≤ 90 min old), `stale` (older: **not used** for `conditions`), `missing` (no reading). **Show stale/missing to the user** with `weather.observed_at` |
+| `weather` | `{status, temperature_2m, visibility_m, wind_gusts_kmh, precip_1h_mm, weather_code, observed_at, road_surface_c, station}` |
 | **`live_score`**, **`live_level`** | the higher of `risk_now` and `road_status_score`. Level on vlado's scale: `low` < 35 ≤ `moderate` < 60 ≤ `high` < 80 ≤ `very_high`; `blocked` when access is blocked; `unknown` without data. **Colour the live layer by this** |
 | `updated_at` | newest of the weather and АПИ data used |
 
@@ -211,8 +212,10 @@ cloud_cover_low, visibility, weather_code` (WMO; 45/48 = fog) and the flags `fog
 - `GET /health`: `{ok, db_time, segments, feeds}`.
 
 Pitch numbers in `validation` (score built on 2021–2023, tested on 2024):
-`top10_priority_fatal` = 0.254 (the top 10% of the "fix these first" list had 25.4% of the 2024 fatal crashes),
-`top10_score_fatal` = 0.237, `chance` = 0.10.
+`top10_priority_fatal` = 0.241 (the top 10% of the "fix these first" list had 24.1% of the 2024 fatal crashes),
+`top10_score_fatal` = 0.237, `top10_baseline_fatal` = 0.255 (ranking by past crash count alone), `chance` = 0.10.
+So: about 2.4x chance, close to (slightly below) the past-crash-count baseline, but with reasons and fixes.
+Segments that tie at the cut-off count proportionally, so the numbers do not depend on sort order.
 
 ## 11. Reason keys
 
@@ -223,7 +226,8 @@ reason object, so a lookup is only needed for `top_reason` in the tiles).
 
 ## Errors
 
-`400 {"error": "..."}` for bad parameters, `404` for unknown ids or paths, `500 {"error": "internal error"}`.
+`400 {"error": "..."}` for bad parameters (also a malformed JSON body), `404` for unknown ids or paths,
+`500 {"error": "internal error"}`. Parameters given twice (`road=A1&road=A2`) are rejected on `/live/sections`.
 CORS is open (`*`) unless the server sets `CORS_ORIGIN`.
 
 ## Things to show in the UI

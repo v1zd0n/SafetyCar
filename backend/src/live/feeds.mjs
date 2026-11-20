@@ -79,6 +79,9 @@ export async function bgtollStations() {
         num(s.humidity), num(s.wind), c.use_model ?? null, c.status ?? null])
     n += r.rowCount
   }
+  // nearest station per 3-km section (stations rarely move; cheap, and keeps api.live_sections fast)
+  await writePool.query('select live.refresh_section_station()')
+    .catch(e => console.error(`[live] refresh_section_station: ${e.message} (run npm run setup-db)`))
   return n
 }
 
