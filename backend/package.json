@@ -11,7 +11,8 @@
     "start": "node src/server.mjs",
     "dev": "node --watch src/server.mjs",
     "poll": "node src/live/poll.mjs once",
-    "setup-db": "node src/setup-db.mjs"
+    "setup-db": "node src/setup-db.mjs",
+    "test": "node ../tests/check_api.mjs"
   },
   "dependencies": {
     "express": "^4.22.3",
