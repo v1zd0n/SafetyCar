@@ -24,8 +24,10 @@ Vite · React 19 · TypeScript · React Three Fiber + drei + postprocessing · G
 |---|---|
 | `src/scroll/useStory.ts` | The master scroll timeline (`T` = section positions). All scroll animation is here. |
 | `src/three/cameraPath.ts` | Camera keyframes (hero → side → approach → inside → screen). Tune these for the real car model. |
-| `src/three/PlaceholderCar.tsx` | Procedural unbranded car + interior used until a real model is added. |
-| `src/three/CarModel.tsx` | Auto-loads `public/models/car.glb` if it exists, otherwise uses the placeholder. |
+| `src/components/HeroCar.tsx` | Image-based hero car (`public/images/car-hero.webp`) — the default. |
+| `src/three/*` | three.js scene, only downloaded when `public/models/car.glb` exists. |
+| `src/cockpit/*` | 2.5D cockpit: interior photo, road, AR HUD, cluster; hotspots in `config.ts`. |
+| `scripts/cockpit-keys.py` | Turns the generated images in `assets-src/images` into keyed `.webp` assets + screen coordinates. |
 | `src/components/CarScreen.tsx` | The CarPlay-style in-car UI (original design). |
 | `src/map/MapView.tsx` | Mapbox map, terrain, heatmap; flies to a view per section (`src/data/hotspots.ts`). |
 | `src/components/Glitch.tsx` | Scroll-driven glitch transition. |

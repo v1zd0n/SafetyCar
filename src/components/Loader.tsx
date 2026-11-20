@@ -1,27 +1,51 @@
 import { useEffect, useRef, useState } from 'react'
-import { useProgress } from '@react-three/drei'
 import gsap from 'gsap'
 import { useLang } from '../i18n/LangContext'
 
+/** Images the first screens need — preloaded behind the loader. */
+const CRITICAL = [
+  '/images/car-hero.webp',
+  '/images/cockpit-interior.webp',
+  '/images/cockpit-road.webp',
+  '/images/payner-wallpaper.webp',
+  ...['map', 'stats', 'pipeline', 'shield', 'team', 'route'].map((k) => `/images/icons/${k}.webp`),
+]
+
+function usePreload(urls: string[]) {
+  const [done, setDone] = useState(0)
+  useEffect(() => {
+    let alive = true
+    urls.forEach((src) => {
+      const img = new Image()
+      img.onload = img.onerror = () => alive && setDone((d) => d + 1)
+      img.src = src
+    })
+    return () => {
+      alive = false
+    }
+  }, [urls])
+  return (done / urls.length) * 100
+}
+
 /** Branded loader: the shield is "painted" like a road marking while assets load. */
 export function Loader({ onDone }: { onDone: () => void }) {
-  const { progress, active } = useProgress()
+  const progress = usePreload(CRITICAL)
   const { t } = useLang()
   const root = useRef<HTMLDivElement>(null)
   const [shown, setShown] = useState(0)
   const counter = useRef({ v: 0 })
   const finished = useRef(false)
 
-  // safety net: never block the page for more than 5s
+  // safety net: never block the page for more than 6s
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
-    const id = setTimeout(() => setTimedOut(true), 5000)
+    const id = setTimeout(() => setTimedOut(true), 6000)
     return () => clearTimeout(id)
   }, [])
 
   useEffect(() => {
     // never faster than ~1.4s so the intro reads as intentional
-    const goal = active && !timedOut ? Math.min(progress, 96) : 100
+    const goal = timedOut || progress >= 100 ? 100 : Math.min(progress, 96)
     gsap.to(counter.current, {
       v: goal,
       duration: 1.4,
@@ -35,7 +59,7 @@ export function Loader({ onDone }: { onDone: () => void }) {
         tl.to(root.current, { clipPath: 'inset(0 0 100% 0)', duration: 1, ease: 'expo.inOut' }, '-=0.1')
       },
     })
-  }, [progress, active, timedOut, onDone])
+  }, [progress, timedOut, onDone])
 
   return (
     <div className="loader" ref={root} aria-live="polite">

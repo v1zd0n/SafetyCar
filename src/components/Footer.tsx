@@ -6,6 +6,9 @@ export function Footer() {
   const { t, lang, setLang } = useLang()
   return (
     <footer className="footer" id="demo">
+      <div className="footer__bg" aria-hidden>
+        <img src="/images/og-image.webp" alt="" loading="lazy" />
+      </div>
       <div className="footer__top">
         <div>
           <Mark width={40} height={40} />

@@ -10,8 +10,10 @@
   --accent-signal: #ff5a1f;
   --accent-danger: #e5212e;
   --accent-safe: #3ddc97;
-  --glitch-cyan: #00e5ff;
-  --glitch-magenta: #ff2bd6;
+  /* glitch palette — shades of the signal orange */
+  --glitch-amber: #ffb347;
+  --glitch-ember: #ff3b1f;
+  --glitch-rust: #b8320f;
 
   --radius-card: 24px;
   --radius-icon: 26px;

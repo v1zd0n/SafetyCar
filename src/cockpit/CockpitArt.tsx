@@ -158,11 +158,12 @@ export function InteriorArt() {
 
 /** AR heads-up projection on the windshield. */
 export function HudArt({ labels }: { labels: { k: string; dist: string; meta: string; limit: string } }) {
+  // placed on the road in cockpit-road.webp (shifted up by the .cockpit__road offset)
   const chevrons = [
-    { x: 800, y: 392, s: 0.55 },
-    { x: 836, y: 372, s: 0.42 },
-    { x: 866, y: 356, s: 0.32 },
-    { x: 890, y: 344, s: 0.24 },
+    { x: 842, y: 372, s: 0.5 },
+    { x: 858, y: 340, s: 0.4 },
+    { x: 878, y: 316, s: 0.31 },
+    { x: 912, y: 300, s: 0.24 },
   ]
   return (
     <svg className="cockpit__svg hud" viewBox={`0 0 ${W} ${H}`} aria-hidden>
@@ -177,7 +178,7 @@ export function HudArt({ labels }: { labels: { k: string; dist: string; meta: st
       </defs>
       <g filter="url(#hudglow)">
         {/* projected risk lane */}
-        <path className="hud-lane" d={`M700 420 C760 395 820 370 905 338`} stroke="#ff5a1f" strokeWidth="10" strokeLinecap="round" fill="none" opacity=".55" />
+        <path className="hud-lane" d="M830 400 C845 350 862 318 900 302 S980 292 1030 296" stroke="#ff5a1f" strokeWidth="8" strokeLinecap="round" fill="none" opacity=".55" />
         {chevrons.map((c, i) => (
           <path
             key={i}
@@ -194,7 +195,7 @@ export function HudArt({ labels }: { labels: { k: string; dist: string; meta: st
         ))}
         {/* warning readout */}
         {/* outer <g> holds the position; GSAP animates the inner one (it rewrites `transform`) */}
-        <g transform="translate(880 150)">
+        <g transform="translate(940 132) scale(0.82)">
         <g className="hud-card">
           <text className="hud-mono" x="0" y="0" fill="#ff5a1f">{labels.k.toUpperCase()}</text>
           <text className="hud-big" x="0" y="62" fill="#F4F4F5">{labels.dist}</text>

@@ -61,7 +61,7 @@ export const Glitch = forwardRef<GlitchHandle>(function Glitch(_, ref) {
         <span className="w w--m">SafetyCar</span>
         <span className="w">SafetyCar</span>
       </div>
-      {['var(--glitch-cyan)', 'var(--glitch-magenta)', 'var(--accent-signal)', '#F4F4F5', 'var(--glitch-cyan)'].map((c, i) => (
+      {['var(--glitch-amber)', 'var(--glitch-ember)', 'var(--accent-signal)', '#FFE2CC', 'var(--glitch-rust)'].map((c, i) => (
         <i key={i} className="glitch__block" style={{ background: c, height: `${6 + i * 6}px` }} />
       ))}
       <div className="glitch__scan" />

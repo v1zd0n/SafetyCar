@@ -43,6 +43,8 @@ type Opts = {
   ready: boolean
   onSceneActive: (on: boolean) => void
   onMapEnabled: () => void
+  /** GLB availability — the timeline is rebuilt when the 3D scene replaces the image hero */
+  model: string
 }
 
 export function useLenis(ready: boolean) {
@@ -68,7 +70,7 @@ export function useLenis(ready: boolean) {
   }, [ready])
 }
 
-export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled }: Opts) {
+export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, model }: Opts) {
   const sceneOn = useRef(true)
   const mapOn = useRef(false)
 
@@ -79,6 +81,8 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled }: 
       gsap.from('[data-line]', { yPercent: 110, duration: 1.4, ease: 'expo.out', stagger: 0.08, delay: 0.2 })
       gsap.from('[data-reveal]', { opacity: 0, y: 24, duration: 1.2, ease: 'power3.out', stagger: 0.08, delay: 0.5 })
       gsap.from('.nav', { opacity: 0, y: -20, duration: 1, ease: 'power3.out', delay: 0.4 })
+      gsap.from('.hero-car__img, .hero-car__reflection', { opacity: 0, x: 140, duration: 1.8, ease: 'expo.out', delay: 0.3 })
+      gsap.from('.hero-car__glow', { opacity: 0, scale: 0.6, duration: 2, ease: 'power2.out', delay: 0.5 })
     },
     { scope, dependencies: [ready] },
   )
@@ -91,6 +95,21 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled }: 
       const screenBox = q('.cockpit__screen')!
       const mapstage = q('[data-mapstage]')!
       const speedEl = q('[data-speed]')!
+      const heroCar = q('[data-hero-car]') // image hero (absent in GLB mode)
+      const heroBody = q('[data-hero-car-body]')
+
+      /**
+       * Offset that brings the car's front side window (= the body's CSS
+       * transform-origin, 60% 33%) to the viewport centre. Measured on the
+       * untransformed container, so it is stable whatever the current scale.
+       */
+      const toWindow = (axis: 'x' | 'y') => () => {
+        if (!heroCar || !heroBody) return 0
+        const r = heroCar.getBoundingClientRect()
+        const wx = r.left + heroBody.offsetWidth * 0.6
+        const wy = r.top + heroBody.offsetHeight * 0.33
+        return axis === 'x' ? innerWidth / 2 - wx : innerHeight * 0.5 - wy
+      }
 
       const cam = (k: Keyframe, at: number, duration: number, ease = 'power2.inOut') =>
         tl.to(rig, { px: k.pos[0], py: k.pos[1], pz: k.pos[2], tx: k.target[0], ty: k.target[1], tz: k.target[2], duration, ease }, at)
@@ -150,6 +169,14 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled }: 
       tl.to('.hero__right, .hero__scroll, .hero__meta', { y: -40, opacity: 0, duration: 0.6, ease: 'power2.in' }, 0)
       tl.to(rig, { heroWeight: 0, duration: 0.8 }, 0)
       cam(KEYFRAMES.side, 0, 1.2)
+      if (heroBody) {
+        // image hero: the car rolls closer, then the camera dollies into its side window
+        tl.to('.hero-car__glow', { opacity: 0.4, duration: 1 }, 0)
+        tl.to(heroBody, { scale: 1.18, x: () => toWindow('x')() * 0.25, y: () => toWindow('y')() * 0.15, duration: 1.2, ease: 'power1.inOut' }, 0)
+        tl.to(heroBody, { scale: 3.6, x: toWindow('x'), y: toWindow('y'), duration: 1.1, ease: 'power2.inOut' }, T.approach)
+        tl.to(heroBody, { scale: 9, duration: 0.45, ease: 'power2.in' }, T.glass)
+        tl.to('.hero-car__floor, .hero-car__glow', { opacity: 0, duration: 0.4 }, T.approach + 0.3)
+      }
 
       // ---------- 02 Approach → through the glass ----------
       cam(KEYFRAMES.approach, T.approach, 1.1)
@@ -221,6 +248,6 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled }: 
       tl.to(mapstage, { opacity: 0, duration: 0.3 }, T.glitch + 0.6)
       tl.set({}, {}, T.end)
     },
-    { scope },
+    { scope, dependencies: [model], revertOnUpdate: true },
   )
 }

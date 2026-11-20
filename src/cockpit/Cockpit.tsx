@@ -50,7 +50,7 @@ export function Cockpit() {
   }, [])
 
   return (
-    <div className="cockpit" ref={root} data-cockpit aria-hidden>
+    <div className="cockpit" ref={root} data-cockpit aria-hidden style={{ ['--ar' as string]: COCKPIT.w / COCKPIT.h }}>
       <div className="cockpit__frame" data-cockpit-frame style={{ transformOrigin: screenOrigin }}>
         <div className="cockpit__road" data-road>
           <img alt="" {...road.props} />
@@ -64,6 +64,9 @@ export function Cockpit() {
           {interior.state !== 'ok' && <InteriorArt />}
         </div>
         <div className="cockpit__sweep" data-sweep />
+        {/* screens are transparent in the photo — show "powered-off" glass until they boot */}
+        <div className="cockpit__off" style={rectStyle(COCKPIT.cluster)} />
+        <div className="cockpit__off" style={rectStyle(COCKPIT.screen)} />
         <Cluster />
         <div className="cockpit__screen" style={rectStyle(COCKPIT.screen)}>
           <CarScreen />

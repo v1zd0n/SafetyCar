@@ -8,17 +8,18 @@
  * magenta areas of the interior image (scripts/cockpit-keys.py does it).
  */
 export const COCKPIT = {
-  w: 1536,
-  h: 1024,
+  // measured from public/images/cockpit-interior.webp by scripts/cockpit-keys.py
+  w: 1672,
+  h: 941,
   images: {
     interior: '/images/cockpit-interior.webp', // windshield + screens transparent
     road: '/images/cockpit-road.webp',
     wallpaper: '/images/payner-wallpaper.webp',
   },
-  screen: { x: 584, y: 470, w: 368, h: 226, r: 18 },
-  cluster: { x: 292, y: 474, w: 226, h: 74, r: 12 },
-  /** vanishing point of the road seen through the windshield */
-  horizon: { x: 768, y: 330 },
+  screen: { x: 648, y: 368, w: 384, h: 220, r: 6 },
+  cluster: { x: 356, y: 400, w: 236, h: 64, r: 6 },
+  /** vanishing point of the road as seen through the windshield (vector fallback only) */
+  horizon: { x: 836, y: 300 },
 }
 
 export const pct = (v: number, of: number) => `${(v / of) * 100}%`
