@@ -164,4 +164,4 @@ Keep every row (don't overwrite). The logged history is what lets us estimate th
 - **All times are UTC** in the feeds. Convert to Europe/Sofia only for display.
 - **Demo fallback:** keep one saved response of each feed in the repo (no personal data in any of them). If the
   network fails on stage, the backend can switch to it with a flag. Ideally save a foggy day as a scenario.
-- Not covered here: **АПИ** live road events (closures, accidents, roadworks), left out on purpose for now.
+- See [live road events and section risk](road-status.md) for **АПИ** closures, crashes, and roadworks.
