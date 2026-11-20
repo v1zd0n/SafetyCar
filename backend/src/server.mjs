@@ -34,20 +34,30 @@ const collection = features => ({ type: 'FeatureCollection', features })
 
 // small in-memory cache for the slow network-wide live query
 // (stale entries are served while a refresh runs, so only the very first request ever waits)
+// A failed background refresh is logged and keeps the stale value (an unhandled rejection would crash Node).
+// At most CACHE_MAX keys (any road name can be requested); the oldest key is dropped first.
 const cache = new Map()
+const CACHE_MAX = 100
 async function cached(key, ttlMs, fn) {
   const hit = cache.get(key)
   if (hit && hit.until > Date.now()) return hit.value
   const refresh = (hit?.pending ?? fn().then(value => {
+    cache.delete(key)                      // re-insert = most recent
     cache.set(key, { value, until: Date.now() + ttlMs })
+    while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value)
     return value
+  }).catch(e => {
+    if (cache.get(key)?.value == null) cache.delete(key)    // no placeholder left behind by a failed first load
+    throw e
   }).finally(() => { const h = cache.get(key); if (h) delete h.pending }))
-  if (hit) {
+  if (hit?.value != null) {                // stale value: serve it now, refresh in the background
     hit.pending = refresh
-    return hit.value ?? refresh            // stale value if we have one, otherwise wait for the first result
+    refresh.catch(e => console.error(`[cache] refresh of ${key} failed: ${e.message}`))
+    return hit.value
   }
-  cache.set(key, { value: null, until: 0, pending: refresh })
-  return refresh
+  if (hit) hit.pending = refresh
+  else cache.set(key, { value: null, until: 0, pending: refresh })
+  return refresh                           // nothing cached yet: wait (errors go to the request)
 }
 
 // ---- meta ---------------------------------------------------------------------------------------------------------
@@ -73,18 +83,27 @@ api.get('/meta', wrap(async (req, res) => {
 }))
 
 // ---- risk map (1-km segments) --------------------------------------------------------------------------------------
+// z 0-22, x and y 0 .. 2^z - 1; anything else is a 400 (it used to reach PostGIS and come back as a 500)
+function tileXYZ(req, res) {
+  const [z, x, y] = ['z', 'x', 'y'].map(k => (/^\d{1,8}$/.test(req.params[k]) ? Number(req.params[k]) : NaN))
+  if (!(z <= 22) || !(x < 2 ** z) || !(y < 2 ** z)) {
+    bad(res, 'tile coordinates must be integers with 0 <= z <= 22 and 0 <= x, y < 2^z')
+    return null
+  }
+  return [z, x, y]
+}
 async function tile(res, sql, params) {
   const { rows } = await query(sql, params)
   res.type('application/vnd.mapbox-vector-tile').set('Cache-Control', 'public, max-age=3600').send(rows[0].tile ?? Buffer.alloc(0))
 }
 api.get('/tiles/risk/:z/:x/:y.pbf', wrap(async (req, res) => {
-  const { z, x, y } = req.params
-  await tile(res, 'select api.segment_risk_mvt($1, $2, $3) as tile', [+z, +x, +y])
+  const zxy = tileXYZ(req, res)
+  if (zxy) await tile(res, 'select api.segment_risk_mvt($1, $2, $3) as tile', zxy)
 }))
 api.get('/tiles/crashes/:z/:x/:y.pbf', wrap(async (req, res) => {
-  const { z, x, y } = req.params
-  await tile(res, 'select api.crashes_mvt($1, $2, $3, $4, $5) as tile',
-    [+z, +x, +y, int(req.query.from, 2021, 2021, 2025), int(req.query.to, 2025, 2021, 2025)])
+  const zxy = tileXYZ(req, res)
+  if (zxy) await tile(res, 'select api.crashes_mvt($1, $2, $3, $4, $5) as tile',
+    [...zxy, int(req.query.from, 2021, 2021, 2025), int(req.query.to, 2025, 2021, 2025)])
 }))
 
 api.get('/segments/:segId', wrap(async (req, res) => {
@@ -188,22 +207,28 @@ async function liveSections(heavy, road) {
   return cached(`live:${heavy}:${road ?? ''}`, road ? 30000 : 120000, async () => {
     const { rows } = await query(`select section_id, road, road_class, carriageway, km_from, km_to, oblast, base_score, base_score_max,
         base_class, conditions, multiplier, risk_now, road_status_score, road_status_level, access_status, events, warnings, weather,
-        live_score, live_level, updated_at, st_asgeojson(geom, 6)::json as g
+        weather_status, live_score, live_level, updated_at, st_asgeojson(geom, 6)::json as g
       from api.live_sections($1, $2)`, [heavy, road ?? null])
     return rows
   })
 }
 
+const LEVELS = ['unknown', 'low', 'moderate', 'high', 'very_high', 'blocked']
+
 api.get('/live/sections', wrap(async (req, res) => {
+  // validate everything before the (cached, but on a cold start slow) query
   const vehicle = req.query.vehicle ?? 'car'
   if (!['car', 'heavy'].includes(vehicle)) return bad(res, 'vehicle must be car or heavy')
   const b = bbox(req.query.bbox)
   if (b === undefined) return bad(res, 'bbox must be min_lon,min_lat,max_lon,max_lat')
+  const min = req.query.min_level ? LEVELS.indexOf(req.query.min_level) : 0
+  if (min < 0) return bad(res, 'min_level must be one of ' + LEVELS.join(', '))
+  if (req.query.road !== undefined && typeof req.query.road !== 'string') return bad(res, 'road must be given once')
+  const w = req.query.weight === undefined ? null : Number(req.query.weight)
+  if (w !== null && !req.query.road) return bad(res, 'weight needs road')
+  if (w !== null && !(w > 3.5 && w < 1000)) return bad(res, 'weight must be > 3.5 (tonnes)')
   let rows
-  if (req.query.weight) {                       // a specific weight needs vlado's function on demand: road required
-    if (!req.query.road) return bad(res, 'weight needs road')
-    const w = Number(req.query.weight)
-    if (!(w > 3.5)) return bad(res, 'weight must be > 3.5 (tonnes)')
+  if (w !== null) {                             // a specific weight needs vlado's function on demand: road required
     const r = await query(`select section_id, risk_score, risk_level, access_status, events from api.road_status_risk(true, $1, $2)`, [w, req.query.road])
     const byId = new Map(r.rows.map(x => [x.section_id, x]))
     rows = (await liveSections(true, req.query.road)).map(s => {
@@ -214,12 +239,7 @@ api.get('/live/sections', wrap(async (req, res) => {
     rows = await liveSections(vehicle === 'heavy', req.query.road)
   }
   if (b) rows = rows.filter(r => r.g?.coordinates?.some(([lon, lat]) => lon >= b[0] && lon <= b[2] && lat >= b[1] && lat <= b[3]))
-  if (req.query.min_level) {
-    const order = ['unknown', 'low', 'moderate', 'high', 'very_high', 'blocked']
-    const min = order.indexOf(req.query.min_level)
-    if (min < 0) return bad(res, 'min_level must be one of ' + order.join(', '))
-    rows = rows.filter(r => order.indexOf(r.live_level) >= min)
-  }
+  if (min > 0) rows = rows.filter(r => LEVELS.indexOf(r.live_level) >= min)
   res.set('Cache-Control', 'public, max-age=60').json(collection(rows.map(({ g, ...p }) => feature(g, p))))
 }))
 
@@ -271,6 +291,10 @@ api.use(routeRouter)               // POST /api/route (docs/route-api.md)
 app.use('/api', api)
 app.use((req, res) => res.status(404).json({ error: 'not found' }))
 app.use((err, req, res, _next) => {
+  const status = err.status ?? err.statusCode
+  if (status >= 400 && status < 500) {         // client errors (e.g. malformed JSON body -> 400 from express.json)
+    return res.status(status).json({ error: err.expose === false ? 'bad request' : err.message })
+  }
   console.error(err)
   res.status(500).json({ error: 'internal error' })
 })
