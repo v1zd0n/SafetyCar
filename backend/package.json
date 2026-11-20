@@ -1,0 +1,20 @@
+{
+  "name": "safetycar-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SafetyCar API server and live-data pollers",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "poll": "node src/live/poll.mjs once",
+    "setup-db": "node src/setup-db.mjs"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "pg": "^8.23.1"
+  }
+}
