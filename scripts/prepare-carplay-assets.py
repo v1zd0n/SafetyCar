@@ -9,6 +9,8 @@ from PIL import Image, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "assets-src" / "images"
 OUTPUT = ROOT / "public" / "images" / "ui"
+# the CarPlay frames are imported by the app (hashed file names), so they live under src/
+FRAME_OUTPUT = ROOT / "src" / "assets" / "ui"
 
 
 def remove_violet(image: Image.Image) -> Image.Image:
@@ -27,7 +29,7 @@ def remove_violet(image: Image.Image) -> Image.Image:
     return result
 
 
-def save(name: str, image: Image.Image, width: int, *, crop: bool = False, pad: float = .06) -> None:
+def save(name: str, image: Image.Image, width: int, *, crop: bool = False, pad: float = .06, output: Path = OUTPUT) -> None:
     if crop:
         box = image.getchannel("A").point(lambda value: 255 if value > 120 else 0).getbbox()
         if box is None:
@@ -39,7 +41,8 @@ def save(name: str, image: Image.Image, width: int, *, crop: bool = False, pad: 
                             min(image.width, box[2] + padding), min(image.height, box[3] + padding)))
     if image.width > width:
         image = image.resize((width, round(image.height * width / image.width)), Image.Resampling.LANCZOS)
-    destination = OUTPUT / f"{Path(name).stem}.webp"
+    output.mkdir(parents=True, exist_ok=True)
+    destination = output / f"{Path(name).stem}.webp"
     image.save(destination, "WEBP", quality=86, method=6)
     print(f"{destination.relative_to(ROOT)} {image.width}x{image.height}")
 
@@ -50,7 +53,7 @@ if __name__ == "__main__":
         save(name, remove_violet(Image.open(SOURCE / name)), 160, crop=True)
     for name, width in (("carplay-frame-desktop.jpg", 1500), ("carplay-frame-mobile.jpg", 750)):
         # frames are cropped exactly to the bezel: the page lays the app out in its screen opening
-        save(name, remove_violet(Image.open(SOURCE / name)), width, crop=True, pad=0)
+        save(name, remove_violet(Image.open(SOURCE / name)), width, crop=True, pad=0, output=FRAME_OUTPUT)
     for name in ("icon-car-ui.png", "icon-compass-ui.png", "icon-layers-ui.png", "icon-truck-ui.png",
                  "pin-end.png", "pin-start.png", "risk-high.png", "risk-low.png", "risk-medium.png"):
         save(name, Image.open(SOURCE / name).convert("RGBA"), 160, crop=True)

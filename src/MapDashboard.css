@@ -221,3 +221,7 @@
 .map-legend .legend-temps b{font:700 10px var(--font-mono);color:#d4d4d8}
 .map-legend .legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 1.5px #fff}
 @container screen (max-width:850px){.map-legend .legend-temps{display:none}}
+/* phone: the route panel covers most of the screen — hide the map buttons behind it until it closes */
+@container screen (max-width:600px){
+  .mapdash-screen:has(.mapdash-panel--route) .mapboxgl-ctrl-bottom-right{opacity:0;pointer-events:none}
+}
