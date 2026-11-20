@@ -1,0 +1,16 @@
+/* Popup of a road weather station on the /demo map (dark, like the panels) */
+.station-popup .mapboxgl-popup-content {
+  background: #141416;
+  color: #f4f4f5;
+  border: 1px solid #2a2a2f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: 500 13px/1.45 Onest, system-ui, sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.station-popup .mapboxgl-popup-tip { border-top-color: #141416; border-bottom-color: #141416; }
+.station-popup strong { display: block; font-size: 14px; margin-bottom: 2px; color: #fff; }
+.station-popup .temps { font-size: 15px; font-weight: 600; }
+.station-popup .temps b { color: #ff7a32; font-weight: 700; }
+.station-popup .temps b.ice { color: #4fc3f7; }
+.station-popup small { display: block; margin-top: 4px; color: #a1a1aa; font-size: 11px; }
