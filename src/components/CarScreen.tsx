@@ -51,7 +51,7 @@ export function CarScreen() {
         <div className="screen__status">
           <Clock />
           <span className="screen__route">{t.screen.route}</span>
-          <span>5G · 84%</span>
+          <span>{t.screen.mode}</span>
         </div>
         <div className="screen__main">
           <div className="risk-card" data-screen-widget>

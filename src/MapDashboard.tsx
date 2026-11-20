@@ -5,6 +5,7 @@ import { RouteMap } from './map/RouteMap'
 import { clearDemoTransition, hasDemoTransition } from './transition/goToDemo'
 import './MapDashboard.css'
 
+const routeApiConfigured = Boolean(import.meta.env.VITE_ROUTE_API_URL)
 const riskLabels: Record<RiskLevel, string> = { high: 'Висок риск', medium: 'Среден риск', low: 'Нисък риск' }
 const formatTime = (minutes: number) => `${Math.floor(minutes / 60)} ч ${String(minutes % 60).padStart(2, '0')} мин`
 const findPlace = (list: Place[], value: string) => list.find((place) => place.name.toLocaleLowerCase('bg') === value.trim().toLocaleLowerCase('bg'))
@@ -63,6 +64,9 @@ export default function MapDashboard() {
 
   const riskCounts = { high: 0, medium: 0, low: 0 }
   route.risks.forEach((risk) => riskCounts[risk.level]++)
+  const shownLevels = (['high', 'medium', 'low'] as const).filter((level) => riskCounts[level] > 0)
+  const sampleRoute = route.source === 'demo'
+  const sourceLabel = sampleRoute ? 'Примерни данни' : 'Данни от сървъра'
 
   return <div className={`mapdash${entering ? ' is-entering' : ''}`}>
     <div className="mapdash-map" aria-label="Карта на маршрута"><RouteMap route={route} selectedRisk={selectedRisk} mapStyle={mapStyle} resetViewSignal={resetViewSignal} onSelectRisk={(id) => { setSelectedRisk(id); if (id) openRisks() }} /></div>
@@ -74,12 +78,12 @@ export default function MapDashboard() {
       <a className="rail-presentation" href="/" title="Към презентацията" aria-label="Към презентацията"><img src="/images/ui/icon-home-ui.webp" alt="" /><small>Начало</small></a>
       <div className="rail-spacer" /><span className="rail-status" title="Демонстрационен режим">●</span>
     </nav>
-    <div className="carplay-status" aria-label={`SafetyCar, ${time}`}><span className="carplay-clock">{time}</span><span className="carplay-status-separator" /><strong>SafetyCar OS</strong><span className="carplay-signal" aria-hidden>▂▄▆</span><span className="carplay-battery" aria-hidden>▰</span></div>
+    <div className="carplay-status" aria-label={`SafetyCar, ${time}`}><span className="carplay-clock">{time}</span><span className="carplay-status-separator" /><strong>SafetyCar OS</strong></div>
 
     {routeOpen && <section className="mapdash-panel mapdash-panel--route" aria-labelledby="route-title">
       <header className="panel-header"><div className="panel-brand"><strong>SafetyCar</strong><span>ДЕМО КАРТА</span></div><button className="panel-close" onClick={() => setRouteOpen(false)} aria-label="Затвори панела">×</button></header>
       <div className="panel-scroll">
-        <div className="route-intro"><span className="eyebrow"><i /> ПЛАНИРАНЕ НА МАРШРУТ</span><h1 id="route-title">Накъде пътуваш?</h1><p>Открий трасето и виж риска по пътя.</p></div>
+        <div className="route-intro"><h1 id="route-title">Накъде пътуваш?</h1><p>{routeApiConfigured ? 'Избери два града, за да видиш маршрут и наличните оценки по него.' : 'Избери два от предложените градове, за да разгледаш примерно трасе по коридора София–Бургас.'}</p></div>
         <form className="route-form" onSubmit={submit}>
           <div className="route-inputs">
             <label className="route-field"><span>НАЧАЛНА ТОЧКА</span><div><i className="field-dot field-dot--start" /><input list="route-cities" value={origin} onChange={(event) => setOrigin(event.target.value)} placeholder="Избери град" autoComplete="off" aria-label="Начална точка" /></div></label>
@@ -92,26 +96,26 @@ export default function MapDashboard() {
           {error && <p className="route-error" role="alert">{error}</p>}
         </form>
         <div className="panel-rule" />
-        <div className="route-result-label"><span>ИЗБРАН МАРШРУТ</span><span className="demo-chip">{route.source === 'demo' ? 'ПРИМЕРНИ ДАННИ' : 'ДАННИ ОТ СЪРВЪРА'}</span></div>
+        <div className="route-result-label"><span>ПОКАЗАН МАРШРУТ</span><span className="demo-chip">{sourceLabel.toUpperCase()}</span></div>
         <div className="route-result"><div className="result-route-line"><img src="/images/ui/pin-start.webp" alt="" /><i /><img src="/images/ui/pin-end.webp" alt="" /></div><div><strong>{shownRoute.origin}</strong><small>Начална точка</small><strong>{shownRoute.destination}</strong><small>Крайна точка</small></div></div>
-        <div className="route-stats"><div><span>РАЗСТОЯНИЕ</span><strong>{route.distanceKm} <small>км</small></strong></div><div><span>ВРЕМЕ</span><strong>{formatTime(route.durationMinutes)}</strong></div></div>
-        <button className="risk-shortcut" onClick={openRisks}><span className="risk-shortcut-icon">!</span><span><strong>{route.risks.length} рискови участъка</strong><small>Виж анализа на маршрута</small></span><span>→</span></button>
+        <div className="route-stats"><div><span>РАЗСТОЯНИЕ</span><strong>{route.distanceKm} <small>км</small></strong></div><div><span>ПРИБЛ. ВРЕМЕ</span><strong>{formatTime(route.durationMinutes)}</strong></div></div>
+        <button className="risk-shortcut" onClick={openRisks}><span className="risk-shortcut-icon">!</span><span><strong>Оценки по маршрута</strong><small>Отбелязани участъци ({route.risks.length})</small></span><span>→</span></button>
       </div>
-      <div className="panel-footer"><span className="orange-dot" /> Демонстрационен режим</div>
+      <div className="panel-footer"><span className="orange-dot" /> {routeApiConfigured ? 'Видът МПС се отчита в пътните съобщения, когато са налични.' : 'Видът МПС променя примерното време за пътуване.'}</div>
     </section>}
 
     {risksOpen && <aside className="mapdash-panel mapdash-panel--risks" aria-labelledby="risks-title">
-      <header className="risk-panel-header"><div><span className="eyebrow">АНАЛИЗ НА ТРАСЕТО</span><h2 id="risks-title">Риск по пътя</h2></div><button className="panel-close" onClick={() => setRisksOpen(false)} aria-label="Затвори рисковите участъци">×</button></header>
+      <header className="risk-panel-header"><div><span className="eyebrow">{sourceLabel.toUpperCase()}</span><h2 id="risks-title">Риск по маршрута</h2></div><button className="panel-close" onClick={() => setRisksOpen(false)} aria-label="Затвори панела за риска">×</button></header>
       <div className="risk-panel-scroll">
-        <div className="risk-overview"><div className="risk-overview-number">{route.risks.length.toString().padStart(2, '0')}</div><div><strong>участъка по маршрута</strong><small>{shownRoute.origin} → {shownRoute.destination}</small></div></div>
-        <div className="risk-counts">{(['high', 'medium', 'low'] as const).map((level) => <span key={level} className={`risk-count risk-count--${level}`}><img src={`/images/ui/risk-${level}.webp`} alt="" />{riskCounts[level]} {riskLabels[level].toLowerCase()}</span>)}</div>
-        <div className="risk-list-heading"><span>УЧАСТЪЦИ</span><span>{route.risks.length} ОБЩО</span></div>
-        <div className="risk-list">{route.risks.length ? route.risks.map((risk, index) => <button key={risk.id} className={`risk-item risk-item--${risk.level}${selectedRisk === risk.id ? ' is-selected' : ''}`} onClick={() => setSelectedRisk(selectedRisk === risk.id ? null : risk.id)}><span className="risk-item-top"><span className="risk-item-index">{String(index + 1).padStart(2, '0')}</span><span className={`risk-pill risk-pill--${risk.level}`}><img src={`/images/ui/risk-${risk.level}.webp`} alt="" />{riskLabels[risk.level]}</span></span><strong>{risk.name}</strong><small>{risk.road} · {risk.lengthKm} км</small><span className="risk-item-description">{risk.description}</span><span className="risk-item-action">Покажи на картата ↗</span></button>) : <p className="risk-empty">За избрания маршрут няма примерни рискови участъци.</p>}</div>
+        <div className="risk-overview"><div className="risk-overview-number">{route.risks.length.toString().padStart(2, '0')}</div><div><strong>отбелязани участъци</strong><small>{shownRoute.origin} → {shownRoute.destination}</small></div></div>
+        <div className="risk-counts">{shownLevels.map((level) => <span key={level} className={`risk-count risk-count--${level}`}><img src={`/images/ui/risk-${level}.webp`} alt="" />{riskCounts[level]} · {riskLabels[level]}</span>)}</div>
+        <div className="risk-list-heading"><span>УЧАСТЪЦИ</span></div>
+        <div className="risk-list">{route.risks.length ? route.risks.map((risk, index) => <button key={risk.id} className={`risk-item risk-item--${risk.level}${selectedRisk === risk.id ? ' is-selected' : ''}`} onClick={() => setSelectedRisk(selectedRisk === risk.id ? null : risk.id)}><span className="risk-item-top"><span className="risk-item-index">{String(index + 1).padStart(2, '0')}</span><span className={`risk-pill risk-pill--${risk.level}`}><img src={`/images/ui/risk-${risk.level}.webp`} alt="" />{riskLabels[risk.level]}</span></span><strong>{risk.name}</strong><small>{risk.road} · {risk.lengthKm} км</small><span className="risk-item-description">{risk.description}</span><span className="risk-item-action">Покажи на картата ↗</span></button>) : <p className="risk-empty">{sampleRoute ? 'В това примерно трасе няма отбелязани участъци.' : 'Сървърът не върна отбелязани участъци за този маршрут.'}</p>}</div>
       </div>
-      <div className="risk-panel-footer">Данните са примерни и не са за реална навигация.</div>
+      <div className="risk-panel-footer">{sampleRoute ? 'Трасето и оценките са само за демонстрация.' : 'Показани са само участъците, върнати от сървъра. Покритието на оценките е частично.'}</div>
     </aside>}
 
     <div className="map-tools"><button className="map-mode-badge" type="button" onClick={() => setMapStyle(mapStyle === 'satellite' ? 'streets' : 'satellite')} title="Смени стила на картата" aria-label={`Стил на картата: ${mapStyle === 'satellite' ? 'сателит' : 'стандартна'}. Смени стила.`}><img src="/images/ui/icon-layers-ui.webp" alt="" />{mapStyle === 'satellite' ? 'САТЕЛИТ · 3D' : 'КАРТА · 3D'}</button><button className="map-reset-button" type="button" onClick={() => setResetViewSignal((value) => value + 1)} title="Покажи целия маршрут" aria-label="Покажи целия маршрут"><img src="/images/ui/icon-compass-ui.webp" alt="" /></button></div>
-    <div className="map-legend" aria-label="Легенда на картата"><span><i className="legend-line legend-line--route" /> Маршрут</span><span><i className="legend-line legend-line--high" /> Висок</span><span><i className="legend-line legend-line--medium" /> Среден</span><span><i className="legend-line legend-line--low" /> Нисък</span></div>
+    <div className="map-legend" aria-label="Легенда на картата"><span><i className="legend-line legend-line--route" /> {sampleRoute ? 'Примерно трасе' : 'Маршрут'}</span>{shownLevels.map((level) => <span key={level}><i className={`legend-line legend-line--${level}`} />{riskLabels[level]}</span>)}</div>
   </div>
 }

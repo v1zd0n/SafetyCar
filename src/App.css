@@ -652,10 +652,7 @@ body.demo-exiting::after {
     linear-gradient(to right, var(--bg-base) 0%, rgb(10 10 11 / 0.6) 45%, transparent 75%);
 }
 .footer > :not(.footer__bg) { position: relative; }
-.footer__top { display: flex; justify-content: space-between; gap: 48px; flex-wrap: wrap; }
-.footer__top > div:first-child { display: grid; gap: 16px; align-content: start; max-width: 420px; }
-.footer__cols { display: flex; gap: 80px; flex-wrap: wrap; }
-.footer__cols ul { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 12px; }
+.footer__top { display: grid; gap: 16px; align-content: start; max-width: 420px; }
 .footer__word {
   margin: 64px 0 32px;
   font-family: var(--font-display);
@@ -702,7 +699,6 @@ body.demo-exiting::after {
   .team { grid-template-columns: repeat(2, 1fr); }
   .rail { display: none; }
   .legend { top: 72px; bottom: auto; right: 8px; left: 8px; justify-content: center; }
-  .footer__cols { gap: 32px; }
 }
 
 body.demo-exiting::after {

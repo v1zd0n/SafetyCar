@@ -1,8 +1,8 @@
 # SafetyCar
 
-Interactive map of crash risk on Bulgaria's national roads.
+Prototype for assessing risk along routes on Bulgaria's national roads.
 
-The landing page (`/`) is a scroll-driven 3D story — the camera orbits a car, enters the cabin, the in-car "SafetyCar OS" screen boots, expands into a full-screen Mapbox satellite map with 3D terrain, walks through the project sections, then glitches into the footer. Its Demo buttons open `/demo`: a CarPlay-inspired full-screen satellite route planner with sample risk segments.
+The landing page (`/`) is a scroll-driven 3D story with a simulated in-car warning and a satellite heatmap built from sample hotspots. Its Demo buttons open `/demo`, an interactive route preview with risk estimates for highlighted segments.
 
 ## Run
 
@@ -14,7 +14,9 @@ npm run dev
 
 `npm run build` → production bundle in `dist/` (Mapbox and the demo are code-split).
 
-The demo route data is illustrative. Set `VITE_ROUTE_API_URL` to connect a route backend; the request and response format is in [`docs/route-api.md`](docs/route-api.md). The supplied vehicle and road images are prepared with `python scripts/prepare-demo-images.py` (Pillow and NumPy required).
+The demo opens with a sample route. Without `VITE_ROUTE_API_URL`, it offers sample routes between five cities along the Sofia–Burgas corridor. With a backend configured, submitting the form loads a route and any returned risk estimates. The supplied backend uses Mapbox Directions for the route and evaluates risk along that route using the baseline assessment and recent road reports where available. See [`docs/route-api.md`](docs/route-api.md) for the request and response format.
+
+The supplied vehicle and road images are prepared with `python scripts/prepare-demo-images.py` (Pillow and NumPy required).
 
 ## Deploy
 
@@ -49,7 +51,7 @@ Vite · React 19 · TypeScript · React Three Fiber + drei + postprocessing · G
 | `src/components/CarScreen.tsx` | The CarPlay-style in-car UI (original design). |
 | `src/map/MapView.tsx` | Mapbox map, terrain, heatmap; flies to a view per section (`src/data/hotspots.ts`). |
 | `src/components/Glitch.tsx` | Scroll-driven glitch transition. |
-| `src/i18n/dict.ts` | All copy, BG + EN. |
+| `src/i18n/dict.ts` | Landing page copy, BG + EN. The route demo is currently in Bulgarian. |
 | `src/styles/tokens.css` | Design tokens (mirrors the Figma variables). |
 | `docs/landing-plan.md` | Plan, Figma link, 3D model shortlist, image prompts. |
 
@@ -61,5 +63,4 @@ Vite · React 19 · TypeScript · React Three Fiber + drei + postprocessing · G
 
 ## Data
 
-Hotspots and stats are **mock values** for now — replace with the real dataset (МВР / АПИ / data.egov.bg).
-Credit the 3D model author (CC-BY), Mapbox and OpenStreetMap in the footer.
+The landing heatmap and cockpit use sample data. The landing page's 2024 casualty totals come from the Ministry of Interior records in `ptp_history_21to25.csv`. The baseline road assessment uses geolocated serious crashes outside built-up areas from 2021–2024 and OpenStreetMap road characteristics. See [`docs/database.md`](docs/database.md) for coverage and [`docs/backend-setup.md`](docs/backend-setup.md) for backend setup.

@@ -97,7 +97,7 @@ export function MapOverlay() {
             <a className="btn btn--primary" href="/demo" onClick={goToDemo}>
               {s.team.ctaPrimary} <Arrow />
             </a>
-            <a className="btn btn--ghost" href="https://github.com" target="_blank" rel="noreferrer">
+            <a className="btn btn--ghost" href="https://github.com/v1zd0n/SafetyCar" target="_blank" rel="noreferrer">
               {s.team.ctaGhost} <Arrow />
             </a>
           </div>
@@ -106,6 +106,7 @@ export function MapOverlay() {
 
       <Rail />
       <div className="legend glass">
+        <span className="t-mono c-secondary">{t.legend.title}</span>
         <span><i className="dot dot--danger" /> <span className="t-mono c-secondary">{t.legend.high}</span></span>
         <span><i className="dot dot--signal" /> <span className="t-mono c-secondary">{t.legend.mid}</span></span>
         <span><i className="dot dot--safe" /> <span className="t-mono c-secondary">{t.legend.low}</span></span>

@@ -26,9 +26,9 @@ function describe(row) {
   const parts = []
   const reason = row.reasons?.find?.(x => !x.estimated) ?? row.reasons?.[0]
   if (reason?.bg) parts.push(reason.bg + (reason.detail ? ` (${reason.detail})` : ''))
-  if (row.base_class) parts.push(`клас ${row.base_class} от 5 по историята`)
+  if (row.base_class) parts.push(`базов клас ${row.base_class} от 5`)
   const ev = row.events?.[0]
-  if (ev) parts.push('Сега: ' + (ev.description ?? ev.kind))
+  if (ev) parts.push('Съобщение от АПИ: ' + (ev.description ?? ev.kind))
   return parts.join(' · ') || LEVEL_TEXT[row.level]
 }
 

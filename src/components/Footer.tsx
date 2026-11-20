@@ -11,26 +11,9 @@ export function Footer() {
         <img src="/images/og-image.webp" alt="" loading="lazy" />
       </div>
       <div className="footer__top">
-        <div>
-          <Mark width={40} height={40} />
-          <h2 className="t-display-m">{t.footer.title}</h2>
-          <p className="t-body-m">{t.footer.sub}</p>
-          <a className="btn btn--primary" href="/demo" onClick={goToDemo} style={{ marginTop: 24 }}>{t.nav.demo} →</a>
-        </div>
-        <div className="footer__cols">
-          {t.footer.cols.map((c) => (
-            <div key={c.h}>
-              <p className="t-mono c-muted">{c.h}</p>
-              <ul>
-                {c.items.map((i) => (
-                  <li key={i} className="t-body-m">
-                    {i}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        <Mark width={40} height={40} />
+        <h2 className="t-display-m">{t.footer.title}</h2>
+        <a className="btn btn--primary" href="/demo" onClick={goToDemo} style={{ marginTop: 24 }}>{t.nav.demo} →</a>
       </div>
       <p className="footer__word" aria-hidden>
         SafetyCar

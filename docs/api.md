@@ -1,6 +1,6 @@
 # SafetyCar API: endpoints for the frontend
 
-Everything the map needs comes from one small API (`backend/`, Node + Express) on top of the PostGIS database.
+The API (`backend/`, Node + Express) serves road and route data from the PostGIS database.
 All responses are JSON or Mapbox vector tiles, all coordinates are WGS 84 (lon, lat), all times are UTC (ISO 8601).
 
 | | Base URL |
@@ -8,18 +8,13 @@ All responses are JSON or Mapbox vector tiles, all coordinates are WGS 84 (lon, 
 | Local | `http://localhost:8787/api` (start it: `cd backend && npm install && npm start`) |
 | Server | `https://safetycar.invent2025.org/api`, once the Apache proxy is set up (`docs/backend-setup.md`) |
 
-Vite dev proxy, so the same `/api/...` paths work locally and on the server:
+Set `VITE_ROUTE_API_URL=http://localhost:8787/api/route` for local development with the backend running. In production, use `/api/route` if the site and API share an origin through the Apache proxy.
 
-```ts
-// vite.config.ts
-server: { port: 5173, proxy: { '/api': 'http://localhost:8787' } }
-```
-
-Text for users comes in both languages where it is ours (`bg`, `en`). Texts from АПИ (event descriptions) are Bulgarian only.
+The Bulgarian route demo uses `GET /places` and `POST /route` when configured, as described in [the route API guide](route-api.md). The landing page uses a sample heatmap and bundled casualty totals.
 
 ---
 
-## Which endpoint for which part of the UI
+## Backend endpoints for future UI integrations
 
 | UI part | Endpoint |
 |---|---|
