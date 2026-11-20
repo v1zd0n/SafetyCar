@@ -79,10 +79,11 @@ export function CarScreen() {
       </div>
 
       <div className="screen__boot" data-screen-boot>
-        <div className="boot__logo">
-          <svg viewBox="0 0 100 100" aria-hidden>
-            <circle cx="50" cy="50" r="44" stroke="#ffffff" strokeOpacity=".1" strokeWidth="3" fill="none" />
-            <circle className="boot__ring" cx="50" cy="50" r="44" stroke="var(--accent-signal)" strokeWidth="3" fill="none" pathLength={1} />
+        <div className="boot__brand">
+          {/* stadium outline drawn AROUND the wordmark — never crosses the text */}
+          <svg className="boot__frame" viewBox="0 0 200 64" preserveAspectRatio="none" aria-hidden>
+            <rect x="1.5" y="1.5" width="197" height="61" rx="30.5" fill="none" stroke="#ffffff" strokeOpacity=".08" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            <rect className="boot__ring" x="1.5" y="1.5" width="197" height="61" rx="30.5" fill="none" stroke="var(--accent-signal)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" pathLength={1} />
           </svg>
           <span className="boot__word">
             Payner<em>OS</em>

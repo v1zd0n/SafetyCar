@@ -24,8 +24,8 @@ Vite · React 19 · TypeScript · React Three Fiber + drei + postprocessing · G
 |---|---|
 | `src/scroll/useStory.ts` | The master scroll timeline (`T` = section positions). All scroll animation is here. |
 | `src/three/cameraPath.ts` | Camera keyframes (hero → side → approach → inside → screen). Tune these for the real car model. |
-| `src/components/HeroCar.tsx` | Image-based hero car (`public/images/car-hero.webp`) — the default. |
-| `src/three/*` | three.js scene, only downloaded when `public/models/car.glb` exists. |
+| `src/three/PlaceholderCar.tsx` | Procedural unbranded EV (sculpted body, light bars, spinning aero wheels) — swapped for `public/models/car.glb` when present. |
+| `src/three/Decor.tsx` | Studio decor: scrolling lane, turntable, light portals, LED wall, speed streaks, sparkles. |
 | `src/cockpit/*` | 2.5D cockpit: interior photo, road, AR HUD, cluster; hotspots in `config.ts`. |
 | `scripts/cockpit-keys.py` | Turns the generated images in `assets-src/images` into keyed `.webp` assets + screen coordinates. |
 | `src/components/CarScreen.tsx` | The CarPlay-style in-car UI (original design). |

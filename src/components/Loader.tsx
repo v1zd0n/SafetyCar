@@ -4,7 +4,6 @@ import { useLang } from '../i18n/LangContext'
 
 /** Images the first screens need — preloaded behind the loader. */
 const CRITICAL = [
-  '/images/car-hero.webp',
   '/images/cockpit-interior.webp',
   '/images/cockpit-road.webp',
   '/images/payner-wallpaper.webp',
@@ -28,7 +27,8 @@ function usePreload(urls: string[]) {
 }
 
 /** Branded loader: the shield is "painted" like a road marking while assets load. */
-export function Loader({ onDone }: { onDone: () => void }) {
+/** `waitFor` = the 3D scene has been created (its chunk is loaded lazily). */
+export function Loader({ onDone, waitFor }: { onDone: () => void; waitFor: boolean }) {
   const progress = usePreload(CRITICAL)
   const { t } = useLang()
   const root = useRef<HTMLDivElement>(null)
@@ -39,13 +39,13 @@ export function Loader({ onDone }: { onDone: () => void }) {
   // safety net: never block the page for more than 6s
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
-    const id = setTimeout(() => setTimedOut(true), 6000)
+    const id = setTimeout(() => setTimedOut(true), 8000)
     return () => clearTimeout(id)
   }, [])
 
   useEffect(() => {
     // never faster than ~1.4s so the intro reads as intentional
-    const goal = timedOut || progress >= 100 ? 100 : Math.min(progress, 96)
+    const goal = timedOut || (progress >= 100 && waitFor) ? 100 : Math.min(progress, 96)
     gsap.to(counter.current, {
       v: goal,
       duration: 1.4,
@@ -59,7 +59,7 @@ export function Loader({ onDone }: { onDone: () => void }) {
         tl.to(root.current, { clipPath: 'inset(0 0 100% 0)', duration: 1, ease: 'expo.inOut' }, '-=0.1')
       },
     })
-  }, [progress, timedOut, onDone])
+  }, [progress, waitFor, timedOut, onDone])
 
   return (
     <div className="loader" ref={root} aria-live="polite">

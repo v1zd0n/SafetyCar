@@ -10,7 +10,7 @@ import type { GlitchHandle } from '../components/Glitch'
 gsap.registerPlugin(ScrollTrigger, useGSAP)
 
 // dev-only handle for debugging / automated screenshots
-if (import.meta.env.DEV) (window as unknown as { __sc: unknown }).__sc = { gsap, story }
+if (import.meta.env.DEV) (window as unknown as { __sc: unknown }).__sc = { gsap, story, rig }
 
 /** Timeline positions (in timeline seconds — scroll distance is proportional). */
 export const T = {
@@ -43,8 +43,6 @@ type Opts = {
   ready: boolean
   onSceneActive: (on: boolean) => void
   onMapEnabled: () => void
-  /** GLB availability — the timeline is rebuilt when the 3D scene replaces the image hero */
-  model: string
 }
 
 export function useLenis(ready: boolean) {
@@ -70,7 +68,7 @@ export function useLenis(ready: boolean) {
   }, [ready])
 }
 
-export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, model }: Opts) {
+export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled }: Opts) {
   const sceneOn = useRef(true)
   const mapOn = useRef(false)
 
@@ -81,8 +79,6 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, mo
       gsap.from('[data-line]', { yPercent: 110, duration: 1.4, ease: 'expo.out', stagger: 0.08, delay: 0.2 })
       gsap.from('[data-reveal]', { opacity: 0, y: 24, duration: 1.2, ease: 'power3.out', stagger: 0.08, delay: 0.5 })
       gsap.from('.nav', { opacity: 0, y: -20, duration: 1, ease: 'power3.out', delay: 0.4 })
-      gsap.from('.hero-car__img, .hero-car__reflection', { opacity: 0, x: 140, duration: 1.8, ease: 'expo.out', delay: 0.3 })
-      gsap.from('.hero-car__glow', { opacity: 0, scale: 0.6, duration: 2, ease: 'power2.out', delay: 0.5 })
     },
     { scope, dependencies: [ready] },
   )
@@ -95,22 +91,6 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, mo
       const screenBox = q('.cockpit__screen')!
       const mapstage = q('[data-mapstage]')!
       const speedEl = q('[data-speed]')!
-      const heroCar = q('[data-hero-car]') // image hero (absent in GLB mode)
-      const heroBody = q('[data-hero-car-body]')
-
-      /**
-       * Offset that brings the car's front side window (= the body's CSS
-       * transform-origin, 60% 33%) to the viewport centre. Measured on the
-       * untransformed container, so it is stable whatever the current scale.
-       */
-      const toWindow = (axis: 'x' | 'y') => () => {
-        if (!heroCar || !heroBody) return 0
-        const r = heroCar.getBoundingClientRect()
-        const wx = r.left + heroBody.offsetWidth * 0.6
-        const wy = r.top + heroBody.offsetHeight * 0.33
-        return axis === 'x' ? innerWidth / 2 - wx : innerHeight * 0.5 - wy
-      }
-
       const cam = (k: Keyframe, at: number, duration: number, ease = 'power2.inOut') =>
         tl.to(rig, { px: k.pos[0], py: k.pos[1], pz: k.pos[2], tx: k.target[0], ty: k.target[1], tz: k.target[2], duration, ease }, at)
 
@@ -169,14 +149,6 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, mo
       tl.to('.hero__right, .hero__scroll, .hero__meta', { y: -40, opacity: 0, duration: 0.6, ease: 'power2.in' }, 0)
       tl.to(rig, { heroWeight: 0, duration: 0.8 }, 0)
       cam(KEYFRAMES.side, 0, 1.2)
-      if (heroBody) {
-        // image hero: the car rolls closer, then the camera dollies into its side window
-        tl.to('.hero-car__glow', { opacity: 0.4, duration: 1 }, 0)
-        tl.to(heroBody, { scale: 1.18, x: () => toWindow('x')() * 0.25, y: () => toWindow('y')() * 0.15, duration: 1.2, ease: 'power1.inOut' }, 0)
-        tl.to(heroBody, { scale: 3.6, x: toWindow('x'), y: toWindow('y'), duration: 1.1, ease: 'power2.inOut' }, T.approach)
-        tl.to(heroBody, { scale: 9, duration: 0.45, ease: 'power2.in' }, T.glass)
-        tl.to('.hero-car__floor, .hero-car__glow', { opacity: 0, duration: 0.4 }, T.approach + 0.3)
-      }
 
       // ---------- 02 Approach → through the glass ----------
       cam(KEYFRAMES.approach, T.approach, 1.1)
@@ -199,19 +171,25 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, mo
       tl.fromTo('[data-sweep]', { xPercent: -110, opacity: 1 }, { xPercent: 260, duration: 0.7, ease: 'power1.inOut' }, T.ignition)
       tl.to('[data-sweep]', { opacity: 0, duration: 0.1 }, T.ignition + 0.7)
       tl.fromTo('[data-cluster]', { opacity: 0 }, { opacity: 1, duration: 0.15 }, T.ignition + 0.1)
-      const writeSpeed = () => (speedEl.textContent = String(Math.round(speed.v)))
-      tl.fromTo(speed, { v: 0 }, { v: 240, duration: 0.35, ease: 'power2.out', onUpdate: writeSpeed }, T.ignition + 0.15)
-      tl.to(speed, { v: 72, duration: 0.35, ease: 'power2.inOut', onUpdate: writeSpeed }, T.ignition + 0.5)
-      tl.fromTo('[data-risk-bar]', { scaleX: 0 }, { scaleX: 0.82, duration: 0.5, ease: 'power2.out' }, T.ignition + 0.3)
-      tl.fromTo('[data-hud]', { opacity: 0 }, { opacity: 1, duration: 0.3 }, T.ignition + 0.45)
-      tl.fromTo('.hud-lane', { strokeDasharray: '0 400' }, { strokeDasharray: '400 0', duration: 0.4 }, T.ignition + 0.5)
+      // cruising speed comes up first; once the AR warning appears the car is "over the limit"
+      const writeSpeed = () => {
+        speedEl.textContent = String(Math.round(speed.v))
+        speedEl.classList.toggle('is-over', speed.v > 50)
+      }
+      tl.fromTo(speed, { v: 0 }, { v: 87, duration: 0.55, ease: 'power2.out', onUpdate: writeSpeed }, T.ignition + 0.15)
+      tl.fromTo('[data-risk-bar]', { scaleX: 0 }, { scaleX: 0.86, duration: 0.45, ease: 'power2.out' }, T.ignition + 0.5)
+      tl.fromTo('[data-risk-label]', { opacity: 0 }, { opacity: 1, duration: 0.15 }, T.ignition + 0.8)
+      tl.fromTo('[data-ar]', { opacity: 0 }, { opacity: 1, duration: 0.25 }, T.ignition + 0.4)
+      tl.fromTo('.ar-ribbon', { opacity: 0, scaleY: 0.2, transformOrigin: '50% 100%' }, { opacity: 1, scaleY: 1, duration: 0.45, ease: 'power3.out' }, T.ignition + 0.4)
+      tl.fromTo('.ar-hazard', { opacity: 0, scale: 0.4, transformOrigin: '50% 50%' }, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, T.ignition + 0.7)
+      tl.fromTo('[data-hud]', { opacity: 0 }, { opacity: 1, duration: 0.3 }, T.ignition + 0.55)
       tl.fromTo('.hud-card', { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.3, ease: 'power3.out' }, T.ignition + 0.6)
 
       // ---------- Payner OS boot → home ----------
       tl.fromTo('[data-screen]', { opacity: 0 }, { opacity: 1, duration: 0.15 }, T.boot - 0.1)
       tl.fromTo('[data-screen-boot]', { opacity: 0 }, { opacity: 1, duration: 0.1 }, T.boot)
       tl.fromTo('.boot__ring', { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.7, ease: 'power1.inOut' }, T.boot)
-      tl.fromTo('.boot__word', { opacity: 0, letterSpacing: '0.3em' }, { opacity: 1, letterSpacing: '-0.02em', duration: 0.4, ease: 'power3.out' }, T.boot + 0.05)
+      tl.fromTo('.boot__word', { opacity: 0, scale: 0.86, filter: 'blur(6px)' }, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 0.45, ease: 'power3.out' }, T.boot + 0.05)
       tl.fromTo('[data-boot-line]', { opacity: 0, x: -8 }, { opacity: 1, x: 0, stagger: 0.18, duration: 0.15 }, T.boot + 0.25)
       tl.to('[data-screen-boot]', { opacity: 0, scale: 1.04, duration: 0.2 }, T.boot + 0.85)
       tl.fromTo('[data-screen-home]', { opacity: 0 }, { opacity: 1, duration: 0.2 }, T.boot + 0.9)
@@ -222,7 +200,7 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, mo
 
       // ---------- 04 Dolly into the screen → fullscreen map ----------
       tl.to(frame, { scale: fillScale, duration: 1.0, ease: 'expo.inOut' }, T.mapOpen)
-      tl.to('[data-hud], .inside-cap', { opacity: 0, duration: 0.3 }, T.mapOpen)
+      tl.to('[data-hud], [data-ar], .inside-cap', { opacity: 0, duration: 0.3 }, T.mapOpen)
       tl.fromTo(mapstage, { opacity: 0 }, { opacity: 1, duration: 0.35 }, T.mapOpen + 0.05)
       tl.to('[data-screen-home]', { opacity: 0, duration: 0.3 }, T.mapOpen + 0.1)
       tl.to('[data-cockpit]', { autoAlpha: 0, duration: 0.15 }, T.mapOpen + 0.95)
@@ -248,6 +226,6 @@ export function useStory({ scope, glitch, ready, onSceneActive, onMapEnabled, mo
       tl.to(mapstage, { opacity: 0, duration: 0.3 }, T.glitch + 0.6)
       tl.set({}, {}, T.end)
     },
-    { scope, dependencies: [model], revertOnUpdate: true },
+    { scope },
   )
 }

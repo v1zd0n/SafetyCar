@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { COCKPIT } from './config'
+import { COCKPIT, roadToFrame } from './config'
 
 const { w: W, h: H, screen: S, cluster: C, horizon: HZ } = COCKPIT
 
@@ -156,15 +156,106 @@ export function InteriorArt() {
   )
 }
 
-/** AR heads-up projection on the windshield. */
+/**
+ * AR projection glued to the road photo: a perspective ribbon that follows
+ * the lane into the bend, light pulses flowing along it, distance-scaled
+ * chevrons and a pulsing hazard marker where the crashes cluster.
+ * Points are pixels of cockpit-road.webp, mapped with roadToFrame.
+ */
+const LANE: [number, number, number][] = [
+  // [u, v, half-width in road px]  (right lane centre → bend after the tail-lights)
+  [1050, 600, 48],
+  [982, 560, 34],
+  [935, 530, 24],
+  [903, 510, 16],
+  [882, 496, 10],
+  [886, 488, 6],
+  [906, 484, 3.5],
+]
+
+function laneGeometry() {
+  const pts = LANE.map(([u, v, w]) => {
+    const [x, y] = roadToFrame(u, v)
+    return { x, y, w: w * 1.08 }
+  })
+  const left: string[] = []
+  const right: string[] = []
+  pts.forEach((p, i) => {
+    const a = pts[Math.max(0, i - 1)]
+    const b = pts[Math.min(pts.length - 1, i + 1)]
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const len = Math.hypot(dx, dy) || 1
+    const nx = -dy / len
+    const ny = dx / len
+    left.push(`${(p.x + nx * p.w).toFixed(1)},${(p.y + ny * p.w).toFixed(1)}`)
+    right.unshift(`${(p.x - nx * p.w).toFixed(1)},${(p.y - ny * p.w).toFixed(1)}`)
+  })
+  const centre = 'M' + pts.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L')
+  return { ribbon: [...left, ...right].join(' '), centre, pts }
+}
+
+export function RoadAR({ label }: { label: string }) {
+  const { ribbon, centre, pts } = laneGeometry()
+  const end = pts[pts.length - 2]
+  const near = pts[0]
+  const chevrons = [0.5, 1.5, 2.5, 3.4].map((t) => {
+    const i = Math.floor(t)
+    const f = t - i
+    const a = pts[i]
+    const b = pts[i + 1]
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, w: a.w + (b.w - a.w) * f, ang: (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + 90 }
+  })
+  return (
+    <svg className="cockpit__svg ar" viewBox={`0 0 ${W} ${H}`} aria-hidden>
+      <defs>
+        <linearGradient id="arFill" gradientUnits="userSpaceOnUse" x1={near.x} y1={near.y} x2={end.x} y2={end.y}>
+          <stop offset="0" stopColor="#ff5a1f" stopOpacity="0" />
+          <stop offset=".25" stopColor="#ff5a1f" stopOpacity=".28" />
+          <stop offset="1" stopColor="#ff3b1f" stopOpacity=".75" />
+        </linearGradient>
+        <filter id="arGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.5" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g className="ar-lane" filter="url(#arGlow)">
+        <polygon className="ar-ribbon" points={ribbon} fill="url(#arFill)" />
+        <path className="ar-edge" d={centre} fill="none" stroke="#ffb347" strokeOpacity=".35" strokeWidth="1.2" />
+        <path className="ar-flow" d={centre} fill="none" stroke="#fff3ea" strokeWidth="2.4" strokeLinecap="round" pathLength={100} />
+        {chevrons.map((c, i) => (
+          <path
+            key={i}
+            className="ar-chevron"
+            style={{ animationDelay: `${i * 0.22}s` }}
+            transform={`translate(${c.x.toFixed(1)} ${c.y.toFixed(1)}) rotate(${c.ang.toFixed(1)}) scale(${(c.w / 26).toFixed(3)})`}
+            d="M-18 8 L0 -8 L18 8"
+            stroke="#ff7a3d"
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        ))}
+      </g>
+      {/* hazard marker at the bend */}
+      <g className="ar-hazard" transform={`translate(${end.x.toFixed(1)} ${(end.y - 18).toFixed(1)})`}>
+        <circle className="ar-ping" r="10" fill="none" stroke="#e5212e" strokeWidth="2" />
+        <circle className="ar-ping ar-ping--2" r="10" fill="none" stroke="#e5212e" strokeWidth="2" />
+        <path d="M0 -9 L8.5 6 H-8.5Z" fill="#e5212e" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M0 -3.5 V1.5 M0 3.6 V3.8" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+        <line x1="0" y1="10" x2="0" y2="17" stroke="#e5212e" strokeWidth="1.2" />
+        <text className="ar-label" x="14" y="-1">{label}</text>
+      </g>
+    </svg>
+  )
+}
+
+/** Heads-up readout projected on the windshield glass. */
 export function HudArt({ labels }: { labels: { k: string; dist: string; meta: string; limit: string } }) {
-  // placed on the road in cockpit-road.webp (shifted up by the .cockpit__road offset)
-  const chevrons = [
-    { x: 842, y: 372, s: 0.5 },
-    { x: 858, y: 340, s: 0.4 },
-    { x: 878, y: 316, s: 0.31 },
-    { x: 912, y: 300, s: 0.24 },
-  ]
   return (
     <svg className="cockpit__svg hud" viewBox={`0 0 ${W} ${H}`} aria-hidden>
       <defs>
@@ -176,36 +267,17 @@ export function HudArt({ labels }: { labels: { k: string; dist: string; meta: st
           </feMerge>
         </filter>
       </defs>
-      <g filter="url(#hudglow)">
-        {/* projected risk lane */}
-        <path className="hud-lane" d="M830 400 C845 350 862 318 900 302 S980 292 1030 296" stroke="#ff5a1f" strokeWidth="8" strokeLinecap="round" fill="none" opacity=".55" />
-        {chevrons.map((c, i) => (
-          <path
-            key={i}
-            className="hud-chevron"
-            style={{ animationDelay: `${i * 0.18}s` }}
-            transform={`translate(${c.x} ${c.y}) scale(${c.s})`}
-            d="M-40 18 L0 -14 L40 18"
-            stroke="#ff5a1f"
-            strokeWidth="12"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        ))}
-        {/* warning readout */}
-        {/* outer <g> holds the position; GSAP animates the inner one (it rewrites `transform`) */}
-        <g transform="translate(940 132) scale(0.82)">
+      {/* outer <g> holds the position; GSAP animates the inner one (it rewrites `transform`) */}
+      <g transform="translate(1090 196) scale(0.74)" filter="url(#hudglow)">
         <g className="hud-card">
           <text className="hud-mono" x="0" y="0" fill="#ff5a1f">{labels.k.toUpperCase()}</text>
           <text className="hud-big" x="0" y="62" fill="#F4F4F5">{labels.dist}</text>
           <text className="hud-mono" x="0" y="96" fill="#F4F4F5" opacity=".7">{labels.meta}</text>
-          <g transform="translate(320 44)">
+          <g transform="translate(320 40)">
             <circle r="34" fill="none" stroke="#e5212e" strokeWidth="7" />
             <text className="hud-limit" x="0" y="11" textAnchor="middle" fill="#F4F4F5">50</text>
           </g>
           <text className="hud-mono" x="0" y="128" fill="#ff5a1f" opacity=".9">{labels.limit}</text>
-        </g>
         </g>
       </g>
     </svg>

@@ -1,7 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { LangProvider } from './i18n/LangContext'
-import { useModelAvailable } from './three/modelAvailable'
-import { HeroCar } from './components/HeroCar'
 import { Nav } from './components/Nav'
 import { Loader } from './components/Loader'
 import { ApproachOverlay, HeroOverlay, InsideCaption } from './components/Overlays'
@@ -14,7 +12,7 @@ import './App.css'
 
 // Mapbox is ~1.7 MB — load it only once the visitor starts the story
 const MapView = lazy(() => import('./map/MapView'))
-// three.js scene: only downloaded when a real GLB exists in /public/models/car.glb
+// three.js scene in its own chunk (the loader waits for it)
 const Experience = lazy(() => import('./three/Experience'))
 
 function useLite() {
@@ -36,7 +34,7 @@ function Landing() {
   const [mapEnabled, setMapEnabled] = useState(false)
   const scope = useRef<HTMLDivElement>(null)
   const glitch = useRef<GlitchHandle>(null)
-  const model = useModelAvailable()
+  const [sceneReady, setSceneReady] = useState(false)
 
   useLenis(ready)
   useStory({
@@ -45,24 +43,17 @@ function Landing() {
     ready,
     onSceneActive: setSceneActive,
     onMapEnabled: useCallback(() => setMapEnabled(true), []),
-    model,
   })
 
   const onLoaded = useCallback(() => setReady(true), [])
+  const onSceneReady = useCallback(() => setSceneReady(true), [])
 
   return (
     <div ref={scope}>
-      {model === 'yes' ? (
-        <Suspense fallback={null}>
-          <Experience active={sceneActive} lite={lite} />
-        </Suspense>
-      ) : (
-        // image-based studio + hero car (default until a GLB model is added)
-        <div className="scene scene--studio">
-          <HeroCar />
-        </div>
-      )}
-      {!ready && <Loader onDone={onLoaded} />}
+      <Suspense fallback={null}>
+        <Experience active={sceneActive} lite={lite} onReady={onSceneReady} />
+      </Suspense>
+      {!ready && <Loader onDone={onLoaded} waitFor={sceneReady} />}
       <Nav />
 
       <section className="story" data-story>

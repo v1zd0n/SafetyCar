@@ -16,10 +16,21 @@ export const COCKPIT = {
     road: '/images/cockpit-road.webp',
     wallpaper: '/images/payner-wallpaper.webp',
   },
-  screen: { x: 648, y: 368, w: 384, h: 220, r: 6 },
-  cluster: { x: 356, y: 400, w: 236, h: 64, r: 6 },
+  // exact magenta bounds (full-resolution flood fill)
+  screen: { x: 648, y: 366, w: 383, h: 222, r: 5 },
+  cluster: { x: 353, y: 398, w: 239, h: 65, r: 5 },
   /** vanishing point of the road as seen through the windshield (vector fallback only) */
   horizon: { x: 836, y: 300 },
+  /**
+   * The road photo is drawn 108% wide and shifted up by ROAD_SHIFT of the
+   * frame height so its horizon sits inside the windshield. roadToFrame maps
+   * a pixel of cockpit-road.webp (1672×941) into cockpit/frame coordinates.
+   */
+  roadShift: 0.334,
+}
+
+export function roadToFrame(u: number, v: number): [number, number] {
+  return [u * 1.08 - 0.04 * COCKPIT.w, v * 1.08 - COCKPIT.roadShift * COCKPIT.h]
 }
 
 export const pct = (v: number, of: number) => `${(v / of) * 100}%`
