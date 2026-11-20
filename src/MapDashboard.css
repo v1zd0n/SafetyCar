@@ -92,3 +92,55 @@
 .mapdash { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-body); }
 .mapdash::before { content: ''; position: absolute; inset: 0; z-index: 40; pointer-events: none; border: 8px solid #11100f; border-radius: 24px; }
 @media (max-width: 600px) { .mapdash::before { border-width: 4px; border-radius: 14px; } }
+
+/* Supplied CarPlay artwork and a quieter, more legible control hierarchy. */
+.mapdash::before{border:solid 9px transparent;border-image:url('/images/ui/carplay-frame-desktop.webp') 148 / 9px / 0 stretch;border-radius:0}
+.mapdash .route-map--missing{background:#181613 url('/images/ui/map-fallback.webp') center/cover}
+.mapdash .map-empty{position:relative;background:#15120fbb;text-shadow:0 1px 3px #000}
+.mapdash-panel{background:#24211e url('/images/ui/panel-material.webp') center/640px auto;border:1px solid #716459;border-radius:22px;box-shadow:0 16px 48px #08070688;backdrop-filter:none}
+.mapdash-panel--route{width:392px}.mapdash-panel--risks{width:340px}
+.mapdash-rail{background:#26221f;border-color:#65584e;backdrop-filter:none}
+.mapdash-rail button img,.mapdash-rail .rail-presentation img{width:25px;height:25px;object-fit:contain;display:block;transition:transform .22s ease}
+.mapdash-rail button:hover img,.mapdash-rail .rail-presentation:hover img{transform:scale(1.12)}
+.mapdash-rail button.is-active{background:#8b4428;color:#fff1e8}
+.route-intro p{font-size:13px;line-height:1.45;color:#d0c4ba}
+.route-field>span,.vehicle-field>span,.route-result-label,.risk-list-heading{color:#cdbfb4}
+.route-field>div{background:#322b26;border-color:#6e5c50}.route-field>div:focus-within{border-color:#ffa16b;background:#3a2e27}
+.mapdash .vehicle-options button{min-height:98px;background:#302a26;border-color:#68584c}
+.mapdash .vehicle-options button .vehicle-illustration{height:47px;max-width:100%;object-fit:contain}
+.mapdash .vehicle-options button:first-child .vehicle-illustration{height:47px;margin:0}
+.mapdash .vehicle-options button>span{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;white-space:nowrap}
+.mapdash .vehicle-options button .vehicle-symbol{width:18px;height:15px;object-fit:contain;margin:0;flex:none}
+.route-result{background:#302924 url('/images/demo-road-texture.webp') center/cover;background-blend-mode:multiply;border:1px solid #56483f;border-radius:13px;padding:13px;margin:16px 0}
+.result-route-line img{width:23px;height:23px;object-fit:contain;flex:none}
+.result-route-line i{height:28px}
+.route-result>div:last-child{grid-template-rows:22px 31px 22px 12px}
+.risk-panel-header:before{background:#654530 url('/images/ui/risk-header.webp') center 54%/cover;background-blend-mode:multiply}
+.risk-panel-header h2{font-size:21px}.risk-panel-header .eyebrow{color:#ffd0a9}
+.risk-count{font-size:9px;line-height:1.15;white-space:normal;text-align:center;min-height:36px;background:#332b25;border-color:#67564b}
+.risk-count img{width:15px;height:15px;object-fit:contain;flex:none}
+.risk-pill{display:inline-flex;align-items:center;gap:3px}.risk-pill img{width:13px;height:13px;object-fit:contain}
+.risk-item{background:#302a25!important;border-color:#69584a!important}.risk-item:hover,.risk-item.is-selected{background:#45342a!important}
+.risk-item--high{border-left-color:#ff482d!important}.risk-item--medium{border-left-color:#ffb23e!important}
+.map-tools{position:absolute;z-index:4;top:72px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:7px}
+.map-mode-badge,.map-reset-button{position:static;transform:none;display:flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 12px;background:#28221de8;border:1px solid #766152;border-radius:12px;color:#ffe0c7;backdrop-filter:none;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
+.map-mode-badge:hover,.map-reset-button:hover{background:#473127;border-color:#ec8d53;transform:translateY(-2px)}
+.map-mode-badge img{width:18px;height:18px;object-fit:contain}.map-reset-button{width:38px;padding:0}.map-reset-button img{width:19px;height:19px;object-fit:contain}
+.map-legend,.carplay-status{background:#28221de8;border-color:#766152;backdrop-filter:none}
+.mapdash .route-pin{width:32px;height:39px;background:none;border:0;border-radius:0}.mapdash .route-pin img{width:100%;height:100%;object-fit:contain;display:block}
+.mapdash.is-entering::after{background:#211b17 url('/images/ui/demo-transition.webp') center/cover;animation:demo-wipe-out .85s cubic-bezier(.65,0,.85,.4) forwards}
+.mapdash.is-entering::before{z-index:101;inset:5%;border:0;background:url('/images/ui/carplay-frame-desktop.webp') center/contain no-repeat;animation:frame-arrival .85s ease-out both}
+@keyframes frame-arrival{0%,35%{opacity:1;transform:scale(.93)}100%{opacity:0;transform:scale(1.04)}}
+@media(max-width:850px){.mapdash-panel--risks{width:min(340px,calc(100vw - 100px))}}
+@media(max-width:600px){
+  .mapdash::before{border:solid 5px transparent;border-image:url('/images/ui/carplay-frame-mobile.webp') 115 / 5px / 0 stretch}
+  .mapdash.is-entering::before{inset:4% 8%;border:0;background-image:url('/images/ui/carplay-frame-mobile.webp')}
+  .mapdash-panel--route{width:min(360px,calc(100vw - 18px));max-height:calc(100dvh - 165px)}
+  .mapdash-panel--risks{width:min(360px,calc(100vw - 18px));max-height:52dvh}
+  .map-tools{top:auto;bottom:62px;left:auto;right:10px;transform:none}
+  .map-mode-badge{font-size:9px}.map-mode-badge,.map-reset-button{height:36px}.map-reset-button{width:36px}
+  .map-legend{bottom:11px;max-width:calc(100vw - 20px);gap:8px;padding:9px 10px}
+  .mapdash-rail{background:#26221f}
+  .mapdash-rail button img,.mapdash-rail .rail-presentation img{width:20px;height:20px}
+}
+@media(prefers-reduced-motion:reduce){.mapdash.is-entering::before{display:none}}

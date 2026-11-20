@@ -704,3 +704,18 @@ body.demo-exiting::after {
   .legend { top: 72px; bottom: auto; right: 8px; left: 8px; justify-content: center; }
   .footer__cols { gap: 32px; }
 }
+
+body.demo-exiting::after {
+  background-color: #211b17;
+  background-image: url('/images/ui/carplay-frame-desktop.webp'), url('/images/ui/demo-transition.webp');
+  background-position: center, center;
+  background-size: min(91vw, 1350px) auto, cover;
+  background-repeat: no-repeat;
+  text-shadow: 0 2px 8px #000;
+}
+@media (max-width: 600px) {
+  body.demo-exiting::after {
+    background-image: url('/images/ui/carplay-frame-mobile.webp'), url('/images/ui/demo-transition.webp');
+    background-size: auto 91vh, cover;
+  }
+}

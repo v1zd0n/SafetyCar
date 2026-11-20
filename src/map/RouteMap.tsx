@@ -10,9 +10,11 @@ function lineFeature(coordinates: Coordinate[]) {
   return { type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } }
 }
 
-export function RouteMap({ route, selectedRisk, onSelectRisk }: {
+export function RouteMap({ route, selectedRisk, mapStyle, resetViewSignal, onSelectRisk }: {
   route: RouteResult
   selectedRisk: string | null
+  mapStyle: 'satellite' | 'streets'
+  resetViewSignal: number
   onSelectRisk: (id: string | null) => void
 }) {
   const host = useRef<HTMLDivElement>(null)
@@ -20,13 +22,15 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
   const markers = useRef<mapboxgl.Marker[]>([])
   const selectRef = useRef(onSelectRisk)
   selectRef.current = onSelectRisk
+  const routeRef = useRef(route)
+  routeRef.current = route
 
   useEffect(() => {
     if (!host.current || !token) return
     mapboxgl.accessToken = token
     const instance = new mapboxgl.Map({
       container: host.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      style: mapStyle === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/streets-v12',
       center: [24.7, 42.4],
       zoom: 7,
       pitch: 58,
@@ -35,7 +39,7 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
       attributionControl: false,
     })
     map.current = instance
-    instance.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right')
+    instance.addControl(new mapboxgl.NavigationControl({ showCompass: false, visualizePitch: true }), 'bottom-right')
     instance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left')
     instance.on('style.load', () => {
       if (!instance.getSource('terrain-dem')) instance.addSource('terrain-dem', { type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize: 512, maxzoom: 14 })
@@ -61,12 +65,10 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
       })
       instance.on('mouseenter', 'risk-lines', () => { instance.getCanvas().style.cursor = 'pointer' })
       instance.on('mouseleave', 'risk-lines', () => { instance.getCanvas().style.cursor = '' })
-      updateMap(instance, route, markers)
+      updateMap(instance, routeRef.current, markers)
     })
     return () => { markers.current.forEach((marker) => marker.remove()); instance.remove(); map.current = null }
-  // Create the map once; later route changes update its GeoJSON sources.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [mapStyle])
 
   useEffect(() => {
     if (map.current?.isStyleLoaded()) updateMap(map.current, route, markers)
@@ -79,6 +81,10 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
     const risk = route.risks.find((item) => item.id === selectedRisk)
     if (risk) instance.flyTo({ center: risk.geometry[Math.floor(risk.geometry.length / 2)], zoom: 10.5, pitch: 65, duration: 900 })
   }, [selectedRisk, route])
+
+  useEffect(() => {
+    if (resetViewSignal && map.current?.isStyleLoaded()) fitRoute(map.current, route)
+  }, [resetViewSignal, route])
 
   if (!token) return <div className="route-map route-map--missing"><div className="map-empty"><span>◈</span><strong>Картата очаква Mapbox ключ</strong><small>Добавете VITE_MAPBOX_TOKEN в .env, за да видите трасето и рисковите участъци.</small></div></div>
   return <div ref={host} className="route-map" role="application" aria-label="Карта на маршрута" />
@@ -100,9 +106,16 @@ function updateMap(instance: mapboxgl.Map, route: RouteResult, markers: { curren
   markers.current = [route.geometry[0], route.geometry[route.geometry.length - 1]].map((point, index) => {
     const element = document.createElement('div')
     element.className = `route-pin route-pin--${index === 0 ? 'start' : 'end'}`
-    element.textContent = index === 0 ? 'A' : 'B'
-    return new mapboxgl.Marker({ element }).setLngLat(point).addTo(instance)
+    const image = document.createElement('img')
+    image.src = `/images/ui/pin-${index === 0 ? 'start' : 'end'}.webp`
+    image.alt = index === 0 ? 'Начална точка' : 'Крайна точка'
+    element.append(image)
+    return new mapboxgl.Marker({ element, anchor: 'bottom' }).setLngLat(point).addTo(instance)
   })
+  fitRoute(instance, route)
+}
+
+function fitRoute(instance: mapboxgl.Map, route: RouteResult) {
   const bounds = route.geometry.reduce((box, point) => box.extend(point), new mapboxgl.LngLatBounds(route.geometry[0], route.geometry[0]))
   const wide = window.innerWidth > 1050
   instance.fitBounds(bounds, { padding: wide ? { top: 90, right: 355, bottom: 90, left: 465 } : { top: 100, right: 50, bottom: 100, left: 80 }, pitch: 58, bearing: -15, maxZoom: 10, duration: 850 })
