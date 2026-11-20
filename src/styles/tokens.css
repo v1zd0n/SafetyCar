@@ -1,0 +1,25 @@
+/* Design tokens — mirrored from the Figma "SafetyCar" variable collection. */
+:root {
+  --bg-base: #0a0a0b;
+  --bg-elevated: #141416;
+  --bg-glass: #1c1c20;
+  --border-subtle: #2a2a2f;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #5c5c66;
+  --accent-signal: #ff5a1f;
+  --accent-danger: #e5212e;
+  --accent-safe: #3ddc97;
+  --glitch-cyan: #00e5ff;
+  --glitch-magenta: #ff2bd6;
+
+  --radius-card: 24px;
+  --radius-icon: 26px;
+  --gutter: clamp(16px, 3.3vw, 48px);
+
+  --font-display: 'Unbounded', system-ui, sans-serif;
+  --font-body: 'Onest', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}

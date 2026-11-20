@@ -1,0 +1,44 @@
+import { useLang } from '../i18n/LangContext'
+import { scrollToLabel } from '../scroll/store'
+import { Mark } from './Icons'
+
+export function Footer() {
+  const { t, lang, setLang } = useLang()
+  return (
+    <footer className="footer" id="demo">
+      <div className="footer__top">
+        <div>
+          <Mark width={40} height={40} />
+          <h2 className="t-display-m">{t.footer.title}</h2>
+          <p className="t-body-m">{t.footer.sub}</p>
+        </div>
+        <div className="footer__cols">
+          {t.footer.cols.map((c) => (
+            <div key={c.h}>
+              <p className="t-mono c-muted">{c.h}</p>
+              <ul>
+                {c.items.map((i) => (
+                  <li key={i} className="t-body-m">
+                    {i}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+      <p className="footer__word" aria-hidden>
+        SafetyCar
+      </p>
+      <div className="footer__bottom t-mono c-muted">
+        <span>{t.footer.copy}</span>
+        <button className="t-mono c-muted" onClick={() => setLang(lang === 'bg' ? 'en' : 'bg')}>
+          BG / EN
+        </button>
+        <button className="t-mono c-signal" onClick={() => scrollToLabel('hero')}>
+          {t.footer.top}
+        </button>
+      </div>
+    </footer>
+  )
+}
