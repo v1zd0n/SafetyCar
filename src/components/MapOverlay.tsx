@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLang } from '../i18n/LangContext'
 import { sectionBus, scrollToLabel, type SectionId } from '../scroll/store'
 import { Arrow } from './Icons'
+import { goToDemo } from '../transition/goToDemo'
 
 const ORDER: Exclude<SectionId, 'intro'>[] = ['problem', 'how', 'features', 'team']
 
@@ -93,7 +94,7 @@ export function MapOverlay() {
             ))}
           </ul>
           <div className="row">
-            <a className="btn btn--primary" href="#demo">
+            <a className="btn btn--primary" href="/demo" onClick={goToDemo}>
               {s.team.ctaPrimary} <Arrow />
             </a>
             <a className="btn btn--ghost" href="https://github.com" target="_blank" rel="noreferrer">

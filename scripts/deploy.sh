@@ -33,6 +33,10 @@ AddType model/gltf-binary .glb
   </FilesMatch>
 </IfModule>
 Options -Indexes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^demo/?$ /index.html [L]
+</IfModule>
 EOF
 
 TARBALL=$(mktemp -t safetycar-dist.XXXXXX.tgz)

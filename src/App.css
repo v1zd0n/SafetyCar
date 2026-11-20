@@ -1,4 +1,21 @@
 /* ---------- Layers ---------- */
+body.demo-exiting::after {
+  content: 'SAFETYCAR  /  DEMO';
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 50%, #ff6b2b 0%, #a23d16 28%, #22140e 70%);
+  color: #fff2e8;
+  font: 700 clamp(17px, 3vw, 34px) var(--font-display);
+  letter-spacing: .12em;
+  clip-path: circle(0 at 50% 50%);
+  animation: demo-wipe-in .65s cubic-bezier(.2,.75,.2,1) forwards;
+  pointer-events: all;
+}
+@keyframes demo-wipe-in { to { clip-path: circle(150% at 50% 50%); } }
+@media (prefers-reduced-motion: reduce) { body.demo-exiting::after { animation: none; clip-path: none; } }
 .scene {
   position: fixed !important;
   inset: 0;

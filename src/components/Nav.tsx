@@ -1,6 +1,7 @@
 import { useLang } from '../i18n/LangContext'
 import { scrollToLabel } from '../scroll/store'
 import { Arrow, Mark } from './Icons'
+import { goToDemo } from '../transition/goToDemo'
 
 export function Nav() {
   const { t, lang, setLang } = useLang()
@@ -38,7 +39,7 @@ export function Nav() {
             </button>
           ))}
         </div>
-        <a className="btn btn--ghost nav__demo" href="#demo">
+        <a className="btn btn--ghost nav__demo" href="/demo" onClick={goToDemo}>
           {t.nav.demo} <Arrow />
         </a>
       </div>

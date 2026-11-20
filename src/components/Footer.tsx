@@ -1,6 +1,7 @@
 import { useLang } from '../i18n/LangContext'
 import { scrollToLabel } from '../scroll/store'
 import { Mark } from './Icons'
+import { goToDemo } from '../transition/goToDemo'
 
 export function Footer() {
   const { t, lang, setLang } = useLang()
@@ -14,6 +15,7 @@ export function Footer() {
           <Mark width={40} height={40} />
           <h2 className="t-display-m">{t.footer.title}</h2>
           <p className="t-body-m">{t.footer.sub}</p>
+          <a className="btn btn--primary" href="/demo" onClick={goToDemo} style={{ marginTop: 24 }}>{t.nav.demo} →</a>
         </div>
         <div className="footer__cols">
           {t.footer.cols.map((c) => (

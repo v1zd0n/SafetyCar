@@ -2,7 +2,7 @@
 
 Interactive map of crash risk on Bulgaria's national roads.
 
-This repo currently contains the **landing page**: a scroll-driven 3D story — the camera orbits a car, enters the cabin, the in-car "SafetyCar OS" screen boots, expands into a full-screen Mapbox satellite map with 3D terrain, walks through the project sections, then glitches into the footer.
+The landing page (`/`) is a scroll-driven 3D story — the camera orbits a car, enters the cabin, the in-car "SafetyCar OS" screen boots, expands into a full-screen Mapbox satellite map with 3D terrain, walks through the project sections, then glitches into the footer. Its Demo buttons open `/demo`: a CarPlay-inspired full-screen satellite route planner with sample risk segments.
 
 ## Run
 
@@ -12,7 +12,9 @@ cp .env.example .env   # then put your public Mapbox token (pk.*) in VITE_MAPBOX
 npm run dev
 ```
 
-`npm run build` → production bundle in `dist/` (Mapbox is code-split and loaded only when the story reaches the car screen).
+`npm run build` → production bundle in `dist/` (Mapbox and the demo are code-split).
+
+The demo route data is illustrative. Set `VITE_ROUTE_API_URL` to connect a route backend; the request and response format is in [`docs/route-api.md`](docs/route-api.md). The supplied vehicle and road images are prepared with `python scripts/prepare-demo-images.py` (Pillow and NumPy required).
 
 ## Deploy
 

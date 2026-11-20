@@ -12,6 +12,7 @@ import './App.css'
 
 // Mapbox is ~1.7 MB — load it only once the visitor starts the story
 const MapView = lazy(() => import('./map/MapView'))
+const Dashboard = lazy(() => import('./MapDashboard'))
 // three.js scene in its own chunk (the loader waits for it)
 const Experience = lazy(() => import('./three/Experience'))
 
@@ -83,6 +84,7 @@ function Landing() {
 }
 
 export default function App() {
+  if (window.location.pathname.replace(/\/$/, '') === '/demo') return <Suspense fallback={null}><Dashboard /></Suspense>
   return (
     <LangProvider>
       <Landing />
