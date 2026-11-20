@@ -6,6 +6,23 @@ import { env, query } from './db.mjs'
 
 export const routeRouter = express.Router()
 
+// GET /api/live/stations — bgtoll.bg road weather stations (МТО) as GeoJSON points: air and asphalt temperature.
+// Latest working reading per station, max 90 min old (live.station_now). surface is null where the station sends
+// no asphalt value. ice_risk = asphalt at or below 0 °C.
+routeRouter.get('/live/stations', async (req, res, next) => {
+  try {
+    const { rows } = await query(`select station_id, name, ts_utc, round(air::numeric, 1)::float8 as air,
+        round(surface::numeric, 1)::float8 as surface, round(humidity::numeric)::float8 as humidity,
+        round(wind::numeric, 1)::float8 as wind,
+        st_asgeojson(st_transform(geom_m, 4326), 5)::json as g
+      from live.station_now`)
+    res.set('Cache-Control', 'public, max-age=120').json({
+      type: 'FeatureCollection',
+      features: rows.map(({ g, ...p }) => ({ type: 'Feature', geometry: g, properties: { ...p, ice_risk: p.surface != null && p.surface <= 0 } })),
+    })
+  } catch (e) { next(e) }
+})
+
 const LEVEL_TEXT = { high: 'Повишен риск', medium: 'Среден риск', low: 'Нисък риск' }
 const inBulgaria = c => Array.isArray(c) && c.length === 2 && c.every(Number.isFinite) &&
   c[0] > 22 && c[0] < 29 && c[1] > 41 && c[1] < 44.5
