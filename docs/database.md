@@ -15,12 +15,9 @@ The backend runs on `wp-host` and connects to `localhost:5432`.
 | `safetycar_ro` | `SELECT` on `public` and `api`, `EXECUTE` on `api.*` | the backend |
 | `safetycar` | owner | pipeline scripts only |
 
-```bash
-# once, as an admin on wp-host: set a password for the backend role (not stored in git)
-sudo -u postgres psql -c "alter role safetycar_ro password '<choose>'"
-# backend env (keep it outside the web root, mode 600), e.g. /data/home/safetycar/backend.env
-DATABASE_URL=postgresql://safetycar_ro:<password>@localhost:5432/safetycar
-```
+The connection settings are on the server in **`/data/home/safetycar/backend.env`** (mode 600, owner `safetycar`,
+outside the web root, not in git): `DATABASE_URL` plus the `PG*` variables. Run the backend as the `safetycar` user and
+load that file (systemd `EnvironmentFile=/data/home/safetycar/backend.env`, or `node --env-file=/data/home/safetycar/backend.env`).
 
 From a laptop, only through SSH: `ssh -L 5433:localhost:5432 wp-host`, then connect to `localhost:5433`.
 
