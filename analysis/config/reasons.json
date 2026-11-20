@@ -1,0 +1,35 @@
+{
+  "_about": "Labels for every reason key that can appear in a segment's top 3. source: road = proactive element, crashes = crash history, weather = weather layer.",
+
+  "curvature":        {"source": "road", "bg": "Остри завои", "en": "Sharp bends"},
+  "access_points":    {"source": "road", "bg": "Много излази към имоти и полски пътища", "en": "Many private and field accesses"},
+  "junctions":        {"source": "road", "bg": "Много кръстовища", "en": "Many junctions"},
+  "roadside":         {"source": "road", "bg": "Препятствия покрай пътя (дървета, сгради)", "en": "Roadside obstacles (trees, buildings)"},
+  "lane_width":       {"source": "road", "bg": "Тесни ленти", "en": "Narrow lanes"},
+  "shoulder":         {"source": "road", "bg": "Липсващ или неукрепен банкет", "en": "Missing or unpaved shoulder"},
+  "overtaking":       {"source": "road", "bg": "Няма ленти за изпреварване", "en": "No overtaking lanes"},
+  "vulnerable_users": {"source": "road", "bg": "Пешеходци и велосипедисти на платното", "en": "Pedestrians and cyclists share the road"},
+  "markings":         {"source": "road", "bg": "Знаци и маркировка", "en": "Signs and markings"},
+  "speed_undivided":  {"source": "road", "bg": "Висока скорост без разделителна ивица", "en": "High speed on an undivided road"},
+
+  "crash_history":    {"source": "crashes", "bg": "Повече тежки ПТП от нормалното за този клас път", "en": "More serious crashes than normal for this road class"},
+  "night":            {"source": "crashes", "bg": "Много ПТП през нощта", "en": "Many crashes at night"},
+  "crash_type:rear_end":     {"source": "crashes", "bg": "Много удари отзад", "en": "Many rear-end crashes"},
+  "crash_type:side":         {"source": "crashes", "bg": "Много странични удари", "en": "Many side-swipe crashes"},
+  "crash_type:angle":        {"source": "crashes", "bg": "Много удари под ъгъл (кръстовища)", "en": "Many angle crashes (junctions)"},
+  "crash_type:head_on":      {"source": "crashes", "bg": "Много челни удари", "en": "Many head-on crashes"},
+  "crash_type:run_off_road": {"source": "crashes", "bg": "Много излизания от пътя", "en": "Many run-off-road crashes"},
+  "crash_type:rollover":     {"source": "crashes", "bg": "Много преобръщания", "en": "Many rollovers"},
+  "crash_type:pedestrian":   {"source": "crashes", "bg": "Много блъснати пешеходци", "en": "Many pedestrians hit"},
+  "crash_type:cyclist":      {"source": "crashes", "bg": "Много блъснати велосипедисти", "en": "Many cyclists hit"},
+  "crash_type:parked":       {"source": "crashes", "bg": "Много удари в паркирани превозни средства", "en": "Many crashes into parked vehicles"},
+  "crash_type:animal_cart":  {"source": "crashes", "bg": "Много удари в животни и каруци", "en": "Many crashes with animals and carts"},
+  "crash_type:obstacle":     {"source": "crashes", "bg": "Много удари в препятствия на пътя", "en": "Many crashes into obstacles on the road"},
+  "crash_type:train":        {"source": "crashes", "bg": "ПТП на ж.п. прелез", "en": "Level-crossing crashes"},
+  "crash_type:other":        {"source": "crashes", "bg": "Много ПТП от друг вид", "en": "Many other crashes"},
+
+  "weather:fog":         {"source": "weather", "bg": "ПТП при мъгла", "en": "Crashes in fog"},
+  "weather:rain_heavy":  {"source": "weather", "bg": "ПТП при силен дъжд", "en": "Crashes in heavy rain"},
+  "weather:wind_strong": {"source": "weather", "bg": "ПТП при силен вятър", "en": "Crashes in strong wind"},
+  "weather:ice":         {"source": "weather", "bg": "ПТП при риск от заледяване", "en": "Crashes when icy"}
+}

@@ -1,0 +1,38 @@
+{
+  "_about": "Finding -> measure. 'basis': dabdp = from the ДАБДП report (RoadEvalGuidelines.docx), project = our proposal, to be checked on site. 'cost' is a rough order of magnitude (low / medium / high), a project estimate.",
+
+  "rules": [
+    {"reason": "markings",         "basis": "dabdp",   "cost": "low",    "bg": "По-качествена маркировка и актуализиране на знаците", "en": "Higher-quality markings and updated signs"},
+    {"reason": "access_points",    "basis": "dabdp",   "cost": "low",    "bg": "Премахване на нерегламентираните излази към горски и полски пътища", "en": "Close unauthorised accesses to forest and field roads"},
+    {"reason": "roadside",         "basis": "dabdp",   "cost": "medium", "bg": "Разчистване и обезопасяване на крайпътното пространство", "en": "Clear and protect the roadside (remove or shield obstacles)"},
+    {"reason": "shoulder",         "basis": "dabdp",   "cost": "low",    "bg": "Профилиране на банкетите и добро отводняване", "en": "Reshape shoulders and improve drainage"},
+    {"reason": "speed_undivided",  "basis": "dabdp",   "cost": "low",    "bg": "Преглед и актуализиране на скоростните режими", "en": "Review and update speed limits"},
+    {"reason": "junctions",        "basis": "project", "cost": "medium", "bg": "По-добра сигнализация и видимост на кръстовищата", "en": "Better signs and visibility at junctions"},
+    {"reason": "curvature",        "basis": "project", "cost": "medium", "bg": "Предупредителни знаци и маркировка за завоите, ограничителни системи, ограничение на скоростта", "en": "Curve warning signs and chevrons, guardrails, lower speed limit"},
+    {"reason": "lane_width",       "basis": "project", "cost": "high",   "bg": "Разширяване и преасфалтиране на платното", "en": "Widen and resurface the carriageway"},
+    {"reason": "overtaking",       "basis": "project", "cost": "high",   "bg": "Ленти за изпреварване (схема 2+1)", "en": "Overtaking lanes (2+1 layout)"},
+    {"reason": "vulnerable_users", "basis": "project", "cost": "medium", "bg": "Тротоари, обозначени пешеходни пътеки и осветление", "en": "Sidewalks, marked crossings and lighting"},
+
+    {"reason": "crash_history",           "basis": "dabdp",   "cost": "low",    "bg": "Оглед на място и актуализиране на сигнализацията", "en": "Site inspection and updated signs and markings"},
+    {"reason": "crash_type:head_on",      "basis": "project", "cost": "high",   "bg": "Разделителна ограда или шумни ленти в оста", "en": "Median barrier or centre-line rumble strips"},
+    {"reason": "crash_type:run_off_road", "basis": "project", "cost": "medium", "bg": "Предпазни огради и шумни ленти по ръба", "en": "Guardrails and edge-line rumble strips"},
+    {"reason": "crash_type:rollover",     "basis": "project", "cost": "medium", "bg": "Предпазни огради и по-полегати откоси", "en": "Guardrails and flatter side slopes"},
+    {"reason": "crash_type:rear_end",     "basis": "project", "cost": "medium", "bg": "Управление на скоростта и предупреждение за задръстване (табла с променливо съдържание)", "en": "Speed management and queue warning (variable message signs)"},
+    {"reason": "crash_type:angle",        "basis": "project", "cost": "high",   "bg": "Преустройство на кръстовището (кръгово движение или светофар)", "en": "Junction redesign (roundabout or traffic lights)"},
+    {"reason": "crash_type:side",         "basis": "project", "cost": "medium", "bg": "По-широки ленти и ясна маркировка между тях", "en": "Wider lanes and clear lane markings"},
+    {"reason": "crash_type:pedestrian",   "basis": "project", "cost": "medium", "bg": "Осветени пешеходни пътеки, острови и тротоари", "en": "Lit pedestrian crossings, refuge islands and sidewalks"},
+    {"reason": "crash_type:cyclist",      "basis": "project", "cost": "medium", "bg": "Отделна велоалея или широк банкет", "en": "Separate cycle lane or wide paved shoulder"},
+    {"reason": "crash_type:animal_cart",  "basis": "project", "cost": "medium", "bg": "Огради срещу диви животни и предупредителни знаци", "en": "Wildlife fencing and warning signs"},
+    {"reason": "crash_type:obstacle",     "basis": "dabdp",   "cost": "low",    "bg": "По-бързо почистване на пътя и възстановяване след инцидент", "en": "Faster road clearing and repair after incidents"},
+    {"reason": "crash_type:parked",       "basis": "project", "cost": "low",    "bg": "Контрол на паркирането и обозначени отбивки", "en": "Parking control and marked lay-bys"},
+    {"reason": "crash_type:train",        "basis": "project", "cost": "high",   "bg": "Бариери и светлинна сигнализация на прелеза", "en": "Barriers and lights at the level crossing"},
+    {"reason": "night",                   "basis": "project", "cost": "medium", "bg": "Осветление и светлоотразителна маркировка", "en": "Lighting and retroreflective markings"},
+
+    {"reason": "weather:fog",         "basis": "project", "cost": "medium", "bg": "Система за предупреждение за мъгла, по-добра маркировка и осветление", "en": "Fog warning system, better markings and lighting"},
+    {"reason": "weather:ice",         "basis": "project", "cost": "medium", "bg": "Приоритетно предварително третиране, станция за температура на пътя, табла с променливо съдържание", "en": "Priority pre-treatment, road temperature station, variable message signs"},
+    {"reason": "weather:wind_strong", "basis": "project", "cost": "medium", "bg": "Знаци за вятър, ветрозащитни прегради, динамично ограничение на скоростта", "en": "Wind warning signs, wind barriers, dynamic speed limits"},
+    {"reason": "weather:rain_heavy",  "basis": "project", "cost": "medium", "bg": "Преглед на отводняването и настилката, противоплъзгащо покритие", "en": "Check drainage and surface, anti-skid surfacing"}
+  ],
+
+  "fallback": {"basis": "dabdp", "cost": "low", "bg": "Подобряване на сигнализацията, видимостта и разпознаваемостта на пътя", "en": "Improve signs, visibility and how readable the road is"}
+}

@@ -1,0 +1,14 @@
+{
+  "_about": "Crash modification factors (CMF) for the proactive score. S = 100 x product(1 / CMF). CMF = 1.0 is the safe reference. Starting values chosen within the ranges of the HSM / CMF Clearinghouse / iRAP literature for rural roads and rounded; they are NOT calibrated on Bulgarian data. Bands: the first [upper_bound, cmf] whose bound is greater than the value applies, otherwise 'else'. For 'lower_is_worse' elements the small values carry the big CMFs (documentation only, same rule).",
+
+  "curvature":        {"column": "curvature_deg_per_km", "bands": [[30, 1.0], [90, 1.1], [180, 1.2], [360, 1.35]], "else": 1.5},
+  "access_points":    {"column": "access_per_km", "bands": [[1, 1.0], [3, 1.08], [6, 1.15], [10, 1.25]], "else": 1.35},
+  "junctions":        {"column": "junctions_per_km", "bands": [[0.5, 1.0], [1.5, 1.1], [3, 1.2]], "else": 1.3},
+  "roadside":         {"column": "roadside_obstacle_share", "bands": [[0.1, 1.0], [0.3, 1.08], [0.6, 1.15]], "else": 1.25},
+  "lane_width":       {"column": "lane_width_m", "lower_is_worse": true, "bands": [[2.75, 1.4], [3.0, 1.25], [3.25, 1.12], [3.5, 1.05]], "else": 1.0, "valid_min": 2.0},
+  "shoulder":         {"column": "shoulder_type", "map": {"paved": 1.0, "unpaved": 1.1, "none": 1.2}, "else": 1.1},
+  "overtaking":       {"cmf_if_missing": 1.08, "_rule": "single carriageway, <= 2 lanes, speed limit >= 80, no overtaking lane"},
+  "vulnerable_users": {"settlement_weight": 0.2, "sidewalk_factor": 0.5, "per_crossing": 0.05, "crossing_cap": 0.15, "_rule": "undivided roads only: 1 + w x settlement_share x (sidewalk ? factor : 1) + min(cap, per_crossing x crossings_per_km)"},
+  "markings":         {"cmf_unknown": 1.0, "_rule": "no public data on sign and marking condition; neutral until field data exists"},
+  "speed_undivided":  {"cmf": 1.1, "min_speed": 90, "_rule": "project addition: speed limit >= 90 km/h on an undivided road"}
+}
