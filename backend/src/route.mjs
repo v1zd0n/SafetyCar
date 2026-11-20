@@ -32,6 +32,15 @@ function describe(row) {
   return parts.join(' · ') || LEVEL_TEXT[row.level]
 }
 
+// GET /api/places — cities and towns in Bulgaria for the start/end fields of /demo (OSM place=city|town)
+routeRouter.get('/places', async (req, res, next) => {
+  try {
+    const { rows } = await query('select name, place, lon, lat from api.places order by place, name')
+    res.set('Cache-Control', 'public, max-age=86400').json(rows.map(r => ({
+      id: `${r.lon},${r.lat}`, name: r.name, kind: r.place, coordinates: [r.lon, r.lat] })))
+  } catch (e) { next(e) }
+})
+
 // GET /api/sections/:sectionId — one ~3-km section (id from /api/route or /api/live/sections, e.g. A1:dual:1:19):
 // baseline score and reasons of its 1-km segments, crash history, live АПИ status for both vehicle classes.
 routeRouter.get('/sections/:sectionId', async (req, res, next) => {
