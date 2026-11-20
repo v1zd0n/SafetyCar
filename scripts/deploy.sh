@@ -35,7 +35,7 @@ AddType model/gltf-binary .glb
 Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^demo/?$ /index.html [L]
+  RewriteRule ^demo(-cp)?/?$ /index.html [L]
 </IfModule>
 EOF
 

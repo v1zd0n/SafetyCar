@@ -27,12 +27,14 @@ def remove_violet(image: Image.Image) -> Image.Image:
     return result
 
 
-def save(name: str, image: Image.Image, width: int, *, crop: bool = False) -> None:
+def save(name: str, image: Image.Image, width: int, *, crop: bool = False, pad: float = .06) -> None:
     if crop:
         box = image.getchannel("A").point(lambda value: 255 if value > 120 else 0).getbbox()
         if box is None:
             raise ValueError(f"No artwork found in {name}")
-        padding = max(4, round(max(box[2] - box[0], box[3] - box[1]) * .06))
+        padding = round(max(box[2] - box[0], box[3] - box[1]) * pad) if pad else 0
+        if pad:
+            padding = max(4, padding)
         image = image.crop((max(0, box[0] - padding), max(0, box[1] - padding),
                             min(image.width, box[2] + padding), min(image.height, box[3] + padding)))
     if image.width > width:
@@ -47,7 +49,8 @@ if __name__ == "__main__":
     for name in ("icon-home-ui.jpg", "icon-risk-ui.jpg", "icon-route-ui.jpg"):
         save(name, remove_violet(Image.open(SOURCE / name)), 160, crop=True)
     for name, width in (("carplay-frame-desktop.jpg", 1500), ("carplay-frame-mobile.jpg", 750)):
-        save(name, remove_violet(Image.open(SOURCE / name)), width, crop=True)
+        # frames are cropped exactly to the bezel: the page lays the app out in its screen opening
+        save(name, remove_violet(Image.open(SOURCE / name)), width, crop=True, pad=0)
     for name in ("icon-car-ui.png", "icon-compass-ui.png", "icon-layers-ui.png", "icon-truck-ui.png",
                  "pin-end.png", "pin-start.png", "risk-high.png", "risk-low.png", "risk-medium.png"):
         save(name, Image.open(SOURCE / name).convert("RGBA"), 160, crop=True)

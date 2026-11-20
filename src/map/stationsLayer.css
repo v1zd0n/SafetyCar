@@ -2,15 +2,29 @@
 .station-popup .mapboxgl-popup-content {
   background: #141416;
   color: #f4f4f5;
-  border: 1px solid #2a2a2f;
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 1px solid #3a3a40;
+  border-radius: 12px;
+  padding: 12px 14px;
   font: 500 13px/1.45 Onest, system-ui, sans-serif;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
 }
 .station-popup .mapboxgl-popup-tip { border-top-color: #141416; border-bottom-color: #141416; }
-.station-popup strong { display: block; font-size: 14px; margin-bottom: 2px; color: #fff; }
-.station-popup .temps { font-size: 15px; font-weight: 600; }
-.station-popup .temps b { color: #ff7a32; font-weight: 700; }
-.station-popup .temps b.ice { color: #4fc3f7; }
-.station-popup small { display: block; margin-top: 4px; color: #a1a1aa; font-size: 11px; }
+.station-popup strong { display: block; font-size: 15px; margin-bottom: 6px; color: #fff; }
+.station-popup .temps { display: flex; flex-wrap: wrap; gap: 6px; }
+.station-popup .temp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px 4px 7px;
+  border-radius: 999px;
+  background: #ffffff10;
+  border: 1px solid #ffffff1f;
+  color: #d4d4d8;
+  font-size: 12px;
+}
+.station-popup .temp i { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 2px #ffffff40; }
+.station-popup .temp b { font-size: 17px; font-weight: 800; line-height: 1; }
+.station-popup .temp.muted { color: #a1a1aa; }
+.station-popup .ice { margin-top: 7px; color: #4fc3f7; font-weight: 700; font-size: 12px; }
+.station-popup .meta { margin-top: 6px; color: #d4d4d8; font-size: 12px; }
+.station-popup small { display: block; margin-top: 6px; color: #a1a1aa; font-size: 11px; }

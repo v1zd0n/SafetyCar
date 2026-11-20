@@ -51,19 +51,45 @@ const demoRisks: (Omit<RiskSection, 'geometry'> & { from: number; to: number })[
   { id: 'r3', name: 'Чирпан — Стара Загора', road: 'A1 · Тракия', level: 'low', description: 'Демонстрационен участък с нисък риск', lengthKm: 15.2, from: 14, to: 17 },
 ]
 
+/** Corridor index of a place: known demo city, else the nearest corridor point (e.g. "my location"). */
+function corridorIndex(place: Place) {
+  if (place.id in placeIndex) return placeIndex[place.id]
+  let best = 0
+  let bestD = Infinity
+  corridor.forEach(([lng, lat], i) => {
+    const d = (lng - place.coordinates[0]) ** 2 + (lat - place.coordinates[1]) ** 2
+    if (d < bestD) {
+      bestD = d
+      best = i
+    }
+  })
+  return best
+}
+
+function km(a: Coordinate, b: Coordinate) {
+  const rad = (d: number) => (d * Math.PI) / 180
+  const h = Math.sin(rad(b[1] - a[1]) / 2) ** 2 + Math.cos(rad(a[1])) * Math.cos(rad(b[1])) * Math.sin(rad(b[0] - a[0]) / 2) ** 2
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
 export function makeDemoRoute(origin: Place, destination: Place, vehicle: VehicleType): RouteResult {
-  const start = placeIndex[origin.id]
-  const end = placeIndex[destination.id]
-  const forward = start < end
+  const start = corridorIndex(origin)
+  const end = corridorIndex(destination)
+  const forward = start <= end
   const low = Math.min(start, end)
   const high = Math.max(start, end)
   const geometry = corridor.slice(low, high + 1)
   if (!forward) geometry.reverse()
+  // a start/end that is not a demo city (e.g. the device location) joins the corridor
+  if (!(origin.id in placeIndex)) geometry.unshift(origin.coordinates)
+  if (!(destination.id in placeIndex)) geometry.push(destination.coordinates)
   const risks = demoRisks.filter((risk) => risk.from >= low && risk.to <= high).map(({ from, to, ...risk }) => ({
     ...risk,
     geometry: forward ? corridor.slice(from, to + 1) : corridor.slice(from, to + 1).reverse(),
   }))
-  const distanceKm = Math.round((high - low) / 27 * 360)
+  let lengthKm = 0
+  for (let i = 1; i < geometry.length; i++) lengthKm += km(geometry[i - 1], geometry[i])
+  const distanceKm = Math.round(lengthKm * 1.18) // road distance is longer than the straight segments
   return {
     id: `${origin.id}-${destination.id}-${vehicle}`,
     source: 'demo',

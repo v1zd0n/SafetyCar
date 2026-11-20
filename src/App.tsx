@@ -84,7 +84,9 @@ function Landing() {
 }
 
 export default function App() {
-  if (window.location.pathname.replace(/\/$/, '') === '/demo') return <Suspense fallback={null}><Dashboard /></Suspense>
+  const path = window.location.pathname.replace(/\/$/, '')
+  // /demo = the route app full screen; /demo-cp = the same app inside the CarPlay frame artwork
+  if (path === '/demo' || path === '/demo-cp') return <Suspense fallback={null}><Dashboard carplay={path === '/demo-cp'} /></Suspense>
   return (
     <LangProvider>
       <Landing />
