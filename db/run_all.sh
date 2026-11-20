@@ -19,3 +19,7 @@ psql -h localhost -d safetycar -Atc "select wx_cell_id, lat, lon from weather_ce
 python3 -I fetch_weather.py cells.txt | $P -f 07_weather.sql
 $P -f 08_segment_year_stats.sql
 $P -f 09_api.sql
+$P -f 10_sections.sql
+$P -f install.sql   # copy of road-status-queries/install.sql (live АПИ function)
+$P -f 11_road_status_cache.sql
+# live refresh every 15 min: infra/live/ (systemd timer safetycar-live.timer, see docs/database.md)

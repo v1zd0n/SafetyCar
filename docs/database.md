@@ -170,6 +170,34 @@ group by c.wx_cell_id, h.fog, h.all_;
 schema `osm` (`highways`, `road_points`, `areas`, `admin`, `places`; the backend has no access to it).
 `road_ways` / `road_parts` are intermediate tables of the segment build.
 
+## Shared ~3 km sections and the live АПИ layer
+
+`sections` (`db/10_sections.sql`) groups up to 3 consecutive segments of the same road, carriageway and OSM part.
+Its `section_id` (`A1:dual:1:19`) is the same ID that `api.road_status_risk` returns, and it is also on `segments`
+and `crashes`. Use it to join history and live data (docs/Goal.md, criterion 1).
+
+| Object | What |
+|---|---|
+| `api.sections` (view) | one row per section: road, km, oblast, crash totals 2021–2024, `serious_per_km_year`, `geom` |
+| `section_year_stats` | per (`section_id`, `year`), crashes outside settlements |
+| `api.road_status_current(vehicle_class, road)` | **live АПИ risk per section, cached** (`'car'` or `'heavy'` = over 3.5 t, mass unspecified); ~0.1 s for the whole network |
+| `api.road_status_mvt(z, x, y, vehicle_class)` | the live layer as a Mapbox vector tile (`GET /tiles/live/{vehicle}/{z}/{x}/{y}.pbf`) |
+| `api.road_status_risk(is_heavy, weight_t, road)` | Vlado's live function, computed on the fly; use it only for a specific mass and with a road filter (~1 s), the whole network takes ~20 s |
+
+Live refresh: systemd timer `safetycar-live.timer` on `wp-host` runs `infra/live/safetycar-live.sh` every 15 minutes
+(as user `safetycar`, files in `/data/home/safetycar/live`): it loads the latest АПИ publications and calls
+`refresh_road_status()`. Check it with `systemctl list-timers safetycar-live.timer` and
+`journalctl -u safetycar-live.service -n 20`. If the feed is older than 45 minutes, `api.road_status_current` returns
+`unknown` (risk `NULL`), as the goal requires.
+
+```sql
+-- live status for the map popup of one section, joined with its history
+select l.risk_level, l.access_status, l.events, l.oldest_publication_at,
+       h.n_fatal_2021_2024, h.serious_per_km_year
+from api.road_status_current('heavy') l join api.sections h using (section_id)
+where l.section_id = $1;
+```
+
 ## Known limits
 
 - OSM snapshot 2026-11-19 vs crashes 2021-01 … 2025-04-13; roads built after a crash are still on the map.

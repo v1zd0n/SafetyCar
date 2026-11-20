@@ -1,0 +1,12 @@
+[Unit]
+Description=SafetyCar live data refresh (АПИ road events)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=safetycar
+Group=safetycar
+ExecStart=/bin/sh /data/home/safetycar/live/safetycar-live.sh
+TimeoutStartSec=300
+Nice=10
