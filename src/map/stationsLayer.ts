@@ -1,4 +1,5 @@
 import mapboxgl from 'mapbox-gl'
+import './stationsLayer.css'
 
 // bgtoll.bg road weather stations (GET /api/live/stations): air and asphalt temperature.
 // Dots from zoom 7, "въздух / асфалт" labels from zoom 8. Blue = asphalt at or below 0 °C (ice risk),
@@ -40,17 +41,19 @@ export function addStationsLayer(map: mapboxgl.Map): () => void {
     paint: { 'text-color': '#F4F4F5', 'text-halo-color': '#0A0A0B', 'text-halo-width': 1.5 },
   })
 
-  const popup = new mapboxgl.Popup({ closeButton: false, offset: 10 })
+  const popup = new mapboxgl.Popup({ closeButton: false, offset: 10, className: 'station-popup', maxWidth: '260px' })
   map.on('click', 'station-dot', (event) => {
     type Props = { name: string; air: number; surface: number | null; humidity: number | null; wind: number | null; ts_utc: string }
     const p = (event.features?.[0] as unknown as { properties?: Props } | undefined)?.properties
     if (!p) return
     const time = new Date(p.ts_utc).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })
+    const has = (v: unknown) => v != null && String(v) !== 'null'
+    const ice = has(p.surface) && Number(p.surface) <= 0
     popup.setLngLat(event.lngLat).setHTML(
-      `<strong>${p.name}</strong><br>въздух ${Math.round(p.air)}°` +
-      (p.surface != null && String(p.surface) !== 'null' ? ` · асфалт ${Math.round(p.surface)}°` : ' · асфалт: няма данни') +
-      (p.wind != null && String(p.wind) !== 'null' ? `<br>вятър ${p.wind} м/с` : '') +
-      `<br><small>метеостанция bgtoll, ${time}</small>`).addTo(map)
+      `<strong>${p.name}</strong><div class="temps">въздух <b>${Math.round(p.air)}°</b>` +
+      (has(p.surface) ? ` · асфалт <b class="${ice ? 'ice' : ''}">${Math.round(Number(p.surface))}°</b>` : ' · асфалт: няма данни') +
+      `</div>` + (has(p.wind) ? `вятър ${p.wind} м/с` : '') +
+      `<small>метеостанция bgtoll, ${time}</small>`).addTo(map)
   })
   map.on('mouseenter', 'station-dot', () => { map.getCanvas().style.cursor = 'pointer' })
   map.on('mouseleave', 'station-dot', () => { map.getCanvas().style.cursor = '' })
