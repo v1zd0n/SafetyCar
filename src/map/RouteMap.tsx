@@ -35,7 +35,6 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
       attributionControl: false,
     })
     map.current = instance
-    let pulseTimer = 0
     instance.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right')
     instance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left')
     instance.on('style.load', () => {
@@ -49,11 +48,6 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
       instance.addSource('risks', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       instance.addLayer({ id: 'risk-halo', type: 'line', source: 'risks', paint: { 'line-color': '#26170f', 'line-width': 15 } })
       instance.addLayer({
-        id: 'risk-glow', type: 'line', source: 'risks',
-        filter: ['==', ['get', 'level'], 'high'],
-        paint: { 'line-color': '#FF4B1F', 'line-width': 24, 'line-blur': 12, 'line-opacity': 0.75 },
-      })
-      instance.addLayer({
         id: 'risk-lines', type: 'line', source: 'risks',
         paint: {
           'line-color': ['match', ['get', 'level'], 'high', colors.high, 'medium', colors.medium, colors.low],
@@ -61,11 +55,6 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
           'line-opacity': 1,
         },
       })
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        pulseTimer = window.setInterval(() => {
-          if (!document.hidden) instance.setPaintProperty('risk-glow', 'line-opacity', 0.68 + Math.sin(performance.now() / 420) * 0.25)
-        }, 90)
-      }
       instance.on('click', 'risk-lines', (event) => {
         const id = (event.features?.[0] as unknown as { properties?: { id?: string } } | undefined)?.properties?.id
         if (id) selectRef.current(id)
@@ -74,7 +63,7 @@ export function RouteMap({ route, selectedRisk, onSelectRisk }: {
       instance.on('mouseleave', 'risk-lines', () => { instance.getCanvas().style.cursor = '' })
       updateMap(instance, route, markers)
     })
-    return () => { window.clearInterval(pulseTimer); markers.current.forEach((marker) => marker.remove()); instance.remove(); map.current = null }
+    return () => { markers.current.forEach((marker) => marker.remove()); instance.remove(); map.current = null }
   // Create the map once; later route changes update its GeoJSON sources.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
